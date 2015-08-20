@@ -1,3 +1,5 @@
+## Statistics for Genomic Data Science R package
+
 This is the R package containing the code and lecture materials for the class Statistics for Genomic Data Science. You can get all of the code used in the class by installing the R package:
 
 ```{r}
