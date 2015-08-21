@@ -4,9 +4,13 @@ Version: 0.1.01
 Authors@R: person("Jeff", "Leek", email = "jtleek@gmail.com", role = c("aut", "cre"))
 Description: This package contains all the lectures and code for the class "Statistics for Genomic Data Science" https://www.coursera.org/course/genstats that is part of the Genomic Data Science Specialization https://www.coursera.org/specialization/genomics/41. 
 Depends: R (>= 3.2.1)
-License: MIT
+License: MIT + file LICENSE
 VignetteBuilder: knitr
 URL: http://github.com/jtleek/checkpvalues
 LazyData: TRUE
-Suggests: knitr,BiocStyle
-
+Suggests: 
+	knitr,
+	BiocStyle,
+	devtools
+Imports:
+	RSkittleBrewer

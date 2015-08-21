@@ -1,0 +1,86 @@
+---
+output:
+  BiocStyle::html_document
+---
+
+<!-- rmarkdown v1 -->
+
+<!--
+%\VignetteIndexEntry{R Markdown Lecture}
+%\VignettePackage{BiocStyle}
+%\VignetteEngine{knitr::knitr}
+-->
+
+```{r style, echo = FALSE, results = 'asis'}
+BiocStyle::markdown()
+```
+
+```{r global_options, include=FALSE}
+knitr::opts_chunk$set(warning=FALSE, message=FALSE)
+palette(RSkittleBrewer::RSkittleBrewer("tropical"))
+```
+
+# The three tables
+
+Package: [genstats](https://github.com/jtleek/genstats)<br />
+Author: [Jeff Leek](www.jtleek.com) <br />
+Compilation date: `r Sys.Date()`
+
+
+### Download the data
+
+```{r}
+con=url("http://bowtie-bio.sourceforge.net/recount/ExpressionSets/bodymap_eset.RData")
+load(file=con)
+close(con)
+```
+
+### An expression set
+
+This kind of object in R contains the three tables
+
+```{r}
+bm = bodymap.eset
+bm
+```
+
+### Table 1: the genomics data
+
+These are usually high dimensional measurements. In this case it is RNA-sequencing data. Each row is a gene and each column is a sample. 
+```{r}
+exp_data = exprs(bm)
+dim(exp_data)
+head(exp_data,n=5)
+```
+
+### Table 2: the phenotype data
+
+This is the "meta data" or "phenotype data" that is what you typically associate the genomic data with. Each column is a variable and each row is a sample.
+
+```{r}
+pheno_data = pData(bm)
+dim(pheno_data)
+head(pheno_data)
+```
+
+### Table 3: the feature data
+
+This is information about the genes or other genomic features you are measuring. Each column is a variable and each row is a gene/feature. 
+
+```{r}
+feature_data = fData(bm)
+dim(fData(bodymap.eset))
+fData(bodymap.eset)[1:10,,1]
+```
+
+
+### Session information
+
+```{r session_info}
+sessionInfo()
+devtools::session_info()
+```
+
+
+
+
