@@ -1,0 +1,112 @@
+---
+output:
+  BiocStyle::html_document
+---
+
+
+<!-- These options are set up specifically for Bioconductor flavored Markdown --> 
+
+
+<!-- rmarkdown v1 -->
+
+<!--
+%\VignetteIndexEntry{R Markdown Lecture}
+%\VignettePackage{BiocStyle}
+%\VignetteEngine{knitr::knitr}
+-->
+
+
+# R Markdown Lecture
+
+Package: [genstats](https://github.com/jtleek/genstats)<br />
+Author: [Jeff Leek](www.jtleek.com) <br />
+Compilation date: `r Sys.Date()`
+
+## Setting some global options
+
+These chunks of code set up some global options to make the markdown pretty. 
+
+```{r style, results = 'asis'}
+BiocStyle::markdown()
+```
+
+```{r global_options}
+## see ch. 10 Hooks of Xie's knitr book
+knit_hooks$set(setPch = function(before, options, envir) {
+  if(before) par(pch = 19)
+})
+opts_chunk$set(setPch = TRUE)
+```
+
+## Compiling documents
+
+1. Try compiling this document using the "Knit HTML" button. What files are produced?
+2. Edit the output to be "pdf_document" and recompile. What files are produced?
+3. Edit the output to be "word_document" and recompile. What files are produced?
+
+
+## Naming code chunks
+
+The label "chunk1" tells you which part of the code was running in case you have errors. If you compile this document you'll see it under the "R markdown" window on R studio. 
+
+
+```{r chunk1}
+x = rnorm(100)
+plot(x,col=3)
+```
+
+## Headers
+
+# This is a primary header.
+## This a secondary header
+### This is a tertiary header
+
+
+## Lists
+
+You can create bulleted and numbered lists in the following way. 
+
+* Bullet item 1
+* Bullet item 2
+* Bullet item 3
+
+1. Numbered item 1
+2. Numbered item 2
+3. Numbered item 3
+
+## Figures
+
+The main arguments you might want to change are centering and figure height. 
+
+```{r chunk2, fig.height=5, fig.align="center" }
+x = rnorm(100)
+plot(x,col=3,pch=19)
+```
+
+
+## Other chunk arguments
+
+Add a chunk option of `echo=FALSE` to hide the code. 
+```{r chunk4, echo=FALSE}
+x = rnorm(100)
+plot(x,col=3,pch=19)
+```
+
+Setting `cache=TRUE` makes it so that the code won't take as long to compile the second time. To see this, uncomment the code below and then run the document twice. 
+
+```{r longtime, cache=TRUE}
+#Sys.sleep(10)
+```
+
+## Session information
+
+It is very useful to record the session information when performing analyses so you can collaborate with yourself in the future. 
+
+```{r session_info}
+sessionInfo()
+devtools::session_info()
+```
+
+
+
+
