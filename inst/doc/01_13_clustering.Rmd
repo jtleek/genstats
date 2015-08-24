@@ -1,0 +1,173 @@
+---
+output:
+  BiocStyle::html_document
+---
+
+
+<!-- These options are set up specifically for Bioconductor flavored Markdown --> 
+
+
+<!-- rmarkdown v1 -->
+
+<!--
+%\VignetteIndexEntry{R Markdown Lecture}
+%\VignettePackage{BiocStyle}
+%\VignetteEngine{knitr::knitr}
+-->
+
+```{r style, results = 'asis',include=FALSE}
+BiocStyle::markdown()
+```
+
+```{r global_options,include=FALSE}
+## see ch. 10 Hooks of Xie's knitr book
+knit_hooks$set(setPch = function(before, options, envir) {
+  if(before) par(pch = 19)
+})
+opts_chunk$set(setPch = TRUE)
+library(RSkittleBrewer)
+# Make the colors pretty
+trop = RSkittleBrewer("tropical")
+palette(trop)
+```
+
+
+# Clustering
+
+Package: [genstats](https://github.com/jtleek/genstats)<br />
+Author: [Jeff Leek](www.jtleek.com) <br />
+Compilation date: `r Sys.Date()`
+
+### General principles
+
+* How do we define close?
+* How do we group things?
+* How do we visualize the grouping? 
+* How do we interpret the grouping? 
+
+
+### Load some data
+
+We will use this expression set to look at how we use plots and tables to check for different characteristics
+
+```{r}
+con =url("http://bowtie-bio.sourceforge.net/recount/ExpressionSets/bodymap_eset.RData")
+load(file=con)
+close(con)
+bm = bodymap.eset
+pdata=pData(bm)
+edata=as.data.frame(exprs(bm))
+fdata = fData(bm)
+ls()
+```
+
+### Calculate distances between samples
+
+* Most important step
+  * Garbage in -> garbage out
+* Distance or similarity
+  * Continuous - euclidean distance
+  * Continous - correlation similarity
+  * Binary - manhattan distance
+* Pick a distance/similarity that makes sense for your problem
+
+First we log transform and remove lowly expressed genes, then calculate Euclidean distance
+
+```{r}
+edata = edata[rowMeans(edata) > 5000,]
+edata = log2(edata + 1)
+
+# By default calculates the distance between rows
+dist1 = dist(t(edata))
+
+## Look at distance matrix
+library(RSkittleBrewer)
+trop = RSkittleBrewer("tropical")
+colramp = colorRampPalette(c(trop[3],"white",trop[2]))(9)
+heatmap(as.matrix(dist1),col=colramp,Colv=NA,Rowv=NA)
+```
+
+
+### Now cluster the samples
+
+Here we use the distance we previously calculated to perform a hierarchical clustering and plot the dendrogram:
+```{r}
+hclust1 = hclust(dist1)
+plot(hclust1)
+```
+
+We can also force all of the leaves to terminate at the same spot
+
+```{r}
+plot(hclust1,hang=-1)
+```
+
+We can also color the dendrogram either into a fixed number of groups
+
+```{r}
+library(dendextend)
+dend = as.dendrogram(hclust1)
+dend = color_labels(hclust1,4,col=trop)
+plot(dend)
+```
+
+Or you can color them directly 
+
+```{r}
+labels_colors(dend) = c(rep(trop[1],10),rep(trop[2],9))
+plot(dend)
+```
+
+This can get very fancy and we won't cover all the options here but for further ideas check out the [dendextend package](http://htmlpreview.github.io/?https://github.com/talgalili/dendextend/blob/master/inst/ignored/Introduction%20to%20dendextend.html).
+
+### K-means clustering
+
+Now we can perform k-means clustering. By default, the rows are clustered. You can either input the cluster means (often unknown) or the number of clusters (here I input 3 clusters)
+
+```{r}
+kmeans1 = kmeans(edata,centers=3)
+names(kmeans1)
+```
+
+Now we can look at the cluster centers
+
+```{r}
+matplot(t(kmeans1$centers),col=1:3,type="l",lwd=3)
+```
+
+We can also look at how many belong to each cluster
+
+```{r}
+table(kmeans1$cluster)
+```
+
+And cluster the data together and plot
+
+```{r}
+heatmap(as.matrix(edata)[order(kmeans1$cluster),],col=colramp,Colv=NA,Rowv=NA)
+```
+
+Note that this is a random start so you get a different clustering if you run it again you get a different answer
+
+```{r}
+kmeans2 = kmeans(edata,centers=3)
+table(kmeans1$cluster,kmeans2$cluster)
+```
+
+
+### Dependencies
+
+These are the packages that this tutorial depends on:
+
+* [BiocStyle](http://www.bioconductor.org/packages/release/bioc/html/BiocStyle.html)
+* [knitr](https://cran.r-project.org/package=knitr)
+* [RSkittleBrewer](https://github.com/alyssafrazee/RSkittleBrewer)
+* [Biobase](http://bioconductor.org/packages/release/bioc/html/Biobase.html)
+* [devtools](https://cran.r-project.org/package=devtools)
+* [dendextend](https://cran.r-project.org/package=dendextend)
+
+### Session information
+
+```{r session_info}
+devtools::session_info()
+```

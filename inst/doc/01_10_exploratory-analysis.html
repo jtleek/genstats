@@ -314,12 +314,11 @@ fdata = fData(bm)
 ls()
 </code></pre>
 
-<pre><code>##  [1] &quot;aa&quot;           &quot;aeid&quot;         &quot;bm&quot;           &quot;bodymap.eset&quot;
-##  [5] &quot;chr&quot;          &quot;colramp&quot;      &quot;con&quot;          &quot;edata&quot;       
-##  [9] &quot;edatay&quot;       &quot;edatay_mat&quot;   &quot;ematrix&quot;      &quot;exp_data&quot;    
-## [13] &quot;fdata&quot;        &quot;feature_data&quot; &quot;filt_edata&quot;   &quot;gene_na&quot;     
-## [17] &quot;mm&quot;           &quot;pdata&quot;        &quot;pheno_data&quot;   &quot;sample_na&quot;   
-## [21] &quot;trop&quot;         &quot;x&quot;
+<pre><code>##  [1] &quot;bm&quot;           &quot;bodymap.eset&quot; &quot;clust1&quot;       &quot;colramp&quot;     
+##  [5] &quot;con&quot;          &quot;dend&quot;         &quot;dist1&quot;        &quot;edata&quot;       
+##  [9] &quot;exp_data&quot;     &quot;fdata&quot;        &quot;feature_data&quot; &quot;hclust1&quot;     
+## [13] &quot;kmeans1&quot;      &quot;kmeans2&quot;      &quot;pdata&quot;        &quot;pheno_data&quot;  
+## [17] &quot;trop&quot;         &quot;x&quot;            &quot;youkmeans2&quot;
 </code></pre>
 
 <h3>Tables for factor/character variables</h3>
@@ -522,7 +521,33 @@ plot(aa,mm,col=2)
 <p>We can remove rows that are mostly zero and notice any differences in the distributions across samples.</p>
 
 <pre><code class="r">library(dplyr)
-edata = as.data.frame(edata)
+</code></pre>
+
+<pre><code>## 
+## Attaching package: &#39;dplyr&#39;
+## 
+## The following object is masked from &#39;package:dendextend&#39;:
+## 
+##     %&gt;%
+## 
+## The following object is masked from &#39;package:Biobase&#39;:
+## 
+##     combine
+## 
+## The following objects are masked from &#39;package:BiocGenerics&#39;:
+## 
+##     combine, intersect, setdiff, union
+## 
+## The following objects are masked from &#39;package:stats&#39;:
+## 
+##     filter, lag
+## 
+## The following objects are masked from &#39;package:base&#39;:
+## 
+##     intersect, setdiff, setequal, union
+</code></pre>
+
+<pre><code class="r">edata = as.data.frame(edata)
 filt_edata = filter(edata,rowMeans(edata) &gt; 1)
 boxplot(log2(filt_edata+1),col=2)
 </code></pre>
@@ -542,7 +567,39 @@ biocLite(&quot;org.Hs.eg.db&quot;)
 <p>Get the chromosomes for each gene using the feature data. </p>
 
 <pre><code class="r">library(org.Hs.eg.db)
-aeid = as.character(fdata[,1])
+</code></pre>
+
+<pre><code>## Loading required package: AnnotationDbi
+## Loading required package: stats4
+## Loading required package: GenomeInfoDb
+## Loading required package: S4Vectors
+## Creating a generic function for &#39;nchar&#39; from package &#39;base&#39; in package &#39;S4Vectors&#39;
+## 
+## Attaching package: &#39;S4Vectors&#39;
+## 
+## The following object is masked from &#39;package:dplyr&#39;:
+## 
+##     rename
+## 
+## Loading required package: IRanges
+## 
+## Attaching package: &#39;IRanges&#39;
+## 
+## The following objects are masked from &#39;package:dplyr&#39;:
+## 
+##     collapse, desc, slice
+## 
+## 
+## Attaching package: &#39;AnnotationDbi&#39;
+## 
+## The following object is masked from &#39;package:dplyr&#39;:
+## 
+##     select
+## 
+## Loading required package: DBI
+</code></pre>
+
+<pre><code class="r">aeid = as.character(fdata[,1])
 chr = AnnotationDbi::select(org.Hs.eg.db,keys=aeid,keytype=&quot;ENSEMBL&quot;,columns=&quot;CHR&quot;)
 head(chr)
 </code></pre>
@@ -620,7 +677,21 @@ heatmap(ematrix,col=colramp)
 <p>If you load the <code>gplots</code> package you can add a color scale with the <code>heatmap.2</code> package. Here we have to add some options to make the dendogram disappear, scale the data by rows, and remove a tracing plot. </p>
 
 <pre><code class="r">library(gplots)
-heatmap.2(ematrix,col=colramp,Rowv=NA,Colv=NA,
+</code></pre>
+
+<pre><code>## 
+## Attaching package: &#39;gplots&#39;
+## 
+## The following object is masked from &#39;package:IRanges&#39;:
+## 
+##     space
+## 
+## The following object is masked from &#39;package:stats&#39;:
+## 
+##     lowess
+</code></pre>
+
+<pre><code class="r">heatmap.2(ematrix,col=colramp,Rowv=NA,Colv=NA,
           dendrogram=&quot;none&quot;, scale=&quot;row&quot;,trace=&quot;none&quot;)
 </code></pre>
 
@@ -669,8 +740,10 @@ heatmap.2(ematrix,col=colramp,Rowv=NA,Colv=NA,
 ##  BiocStyle      * 1.6.0   2015-04-17
 ##  bitops           1.0-6   2013-08-17
 ##  caTools          1.17.1  2014-09-10
+##  colorspace       1.2-6   2015-03-11
 ##  curl             0.9.2   2015-08-08
 ##  DBI            * 0.3.1   2014-09-24
+##  dendextend     * 1.1.0   2015-07-31
 ##  devtools       * 1.8.0   2015-05-09
 ##  digest           0.6.8   2014-12-31
 ##  dplyr          * 0.4.2   2015-06-16
@@ -701,6 +774,7 @@ heatmap.2(ematrix,col=colramp,Rowv=NA,Colv=NA,
 ##  S4Vectors      * 0.6.3   2015-07-31
 ##  stringi          0.5-5   2015-06-29
 ##  stringr          1.0.0   2015-04-30
+##  whisker          0.3-2   2013-04-28
 ##  xml2             0.1.1   2015-06-02
 ##  yaml             2.1.13  2014-06-12
 ##  source                                      
@@ -711,8 +785,10 @@ heatmap.2(ematrix,col=colramp,Rowv=NA,Colv=NA,
 ##  Bioconductor                                
 ##  CRAN (R 3.2.0)                              
 ##  CRAN (R 3.2.0)                              
+##  CRAN (R 3.2.0)                              
 ##  CRAN (R 3.2.1)                              
 ##  CRAN (R 3.2.0)                              
+##  CRAN (R 3.2.1)                              
 ##  CRAN (R 3.2.0)                              
 ##  CRAN (R 3.2.0)                              
 ##  CRAN (R 3.2.1)                              
@@ -742,6 +818,7 @@ heatmap.2(ematrix,col=colramp,Rowv=NA,Colv=NA,
 ##  CRAN (R 3.2.1)                              
 ##  Bioconductor                                
 ##  CRAN (R 3.2.1)                              
+##  CRAN (R 3.2.0)                              
 ##  CRAN (R 3.2.0)                              
 ##  CRAN (R 3.2.1)                              
 ##  CRAN (R 3.2.0)
