@@ -7,6 +7,10 @@ knit_hooks$set(setPch = function(before, options, envir) {
   if(before) par(pch = 19)
 })
 opts_chunk$set(setPch = TRUE)
+library(RSkittleBrewer)
+# Make the colors pretty
+trop = RSkittleBrewer("tropical")
+palette(trop)
 
 ## ------------------------------------------------------------------------
 con=url("http://bowtie-bio.sourceforge.net/recount/ExpressionSets/bodymap_eset.RData")

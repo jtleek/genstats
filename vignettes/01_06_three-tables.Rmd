@@ -25,6 +25,10 @@ knit_hooks$set(setPch = function(before, options, envir) {
   if(before) par(pch = 19)
 })
 opts_chunk$set(setPch = TRUE)
+library(RSkittleBrewer)
+# Make the colors pretty
+trop = RSkittleBrewer("tropical")
+palette(trop)
 ```
 
 
@@ -33,7 +37,6 @@ opts_chunk$set(setPch = TRUE)
 Package: [genstats](https://github.com/jtleek/genstats)<br />
 Author: [Jeff Leek](www.jtleek.com) <br />
 Compilation date: `r Sys.Date()`
-
 
 
 ### Download the data
@@ -81,6 +84,16 @@ feature_data = fData(bm)
 dim(fData(bodymap.eset))
 fData(bodymap.eset)[1:10,,1]
 ```
+
+### Dependencies
+
+These are the packages that this tutorial depends on:
+
+* [BiocStyle](http://www.bioconductor.org/packages/release/bioc/html/BiocStyle.html)
+* [knitr](https://cran.r-project.org/package=knitr)
+* [RSkittleBrewer](https://github.com/alyssafrazee/RSkittleBrewer)
+* [Biobase](http://bioconductor.org/packages/release/bioc/html/Biobase.html)
+* [devtools](https://cran.r-project.org/package=devtools)
 
 
 ### Session information

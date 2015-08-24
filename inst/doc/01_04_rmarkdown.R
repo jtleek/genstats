@@ -20,9 +20,6 @@ plot(x,col=3,pch=19)
 x = rnorm(100)
 plot(x,col=3,pch=19)
 
-## ----longtime, cache=TRUE------------------------------------------------
-#Sys.sleep(10)
-
 ## ----session_info--------------------------------------------------------
 sessionInfo()
 devtools::session_info()
