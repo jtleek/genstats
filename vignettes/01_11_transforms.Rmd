@@ -1,0 +1,166 @@
+---
+output:
+  BiocStyle::html_document
+---
+
+
+<!-- These options are set up specifically for Bioconductor flavored Markdown --> 
+
+
+<!-- rmarkdown v1 -->
+
+<!--
+%\VignetteIndexEntry{R Markdown Lecture}
+%\VignettePackage{BiocStyle}
+%\VignetteEngine{knitr::knitr}
+-->
+
+```{r style, results = 'asis',include=FALSE}
+BiocStyle::markdown()
+```
+
+```{r global_options,include=FALSE}
+## see ch. 10 Hooks of Xie's knitr book
+knit_hooks$set(setPch = function(before, options, envir) {
+  if(before) par(pch = 19)
+})
+opts_chunk$set(setPch = TRUE)
+library(RSkittleBrewer)
+# Make the colors pretty
+trop = RSkittleBrewer("tropical")
+palette(trop)
+```
+
+
+# Data transforms
+
+Package: [genstats](https://github.com/jtleek/genstats)<br />
+Author: [Jeff Leek](www.jtleek.com) <br />
+Compilation date: `r Sys.Date()`
+
+### General principles
+
+* Make sure data is on the right scale for
+  * Visualization
+  * Statistical modeling
+
+
+### Load some data
+
+We will use this expression set to look at how we use plots and tables to check for different characteristics
+
+```{r}
+con =url("http://bowtie-bio.sourceforge.net/recount/ExpressionSets/bodymap_eset.RData")
+load(file=con)
+close(con)
+bm = bodymap.eset
+pdata=pData(bm)
+edata=as.data.frame(exprs(bm))
+fdata = fData(bm)
+ls()
+```
+
+### Skewed distributions
+
+We would like continuous data to be nice and summetric like a normal distribution for two reasons:(1) plots are easier to see this way and (2) most statistical methods are designed to work better for non-skewed data. 
+
+```{r}
+hist(rnorm(1000),col=2)
+```
+
+Realistically though most genomic data is skewed
+
+```{r}
+hist(edata[,1],col=2,breaks=100)
+```
+
+One way to address this skew is to use a transformation. One common transformation is the `log` transform. 
+
+```{r}
+hist(log(edata[,1]),col=2,breaks=100)
+```
+
+One thing to be careful with is that values of zero become `-inf` when you apply the log transform because the log of zero isn't defined. 
+
+```{r}
+min(log(edata))
+```
+
+You can remove this problem by adding a small number to all the counts before taking the log. This doesn't change the overall distribution much but resolves the zero problem
+
+```{r}
+min(log(edata[,1] + 1))
+hist(log(edata[,1] + 1),breaks=100,col=2)
+```
+
+A common choice is to use the `log2` transform. The reason is that data on the `log2` scale can be expressed as [fold changes](https://en.wikipedia.org/wiki/Fold_change). If `log2(x) - log2(y) = z` then there is a `z` fold change difference between `x` and `y`. 
+
+```{r}
+hist(log2(edata[,1] + 1),breaks=100,col=2)
+```
+
+
+Let's zoom in on the values greater than zero (we'll come back to the zero values in a minute)
+
+```{r}
+hist(log2(edata[,1] + 1),breaks=100,col=2,xlim=c(1,15),ylim=c(0,400))
+```
+
+This is starting to look a little better but we still have the zeros problem. 
+
+
+### Removing features without much data
+
+In many types of sequencing data we observe that there is not much data for many features. 
+
+```{r}
+hist(rowSums(edata==0),col=2)
+```
+
+A common pre-processing technique is to remove features that don't have much data. One way to identify and remove them is to use `rowMeans` and `rowMedians`
+
+```{r}
+low_genes = rowMeans(edata) < 5
+table(low_genes)
+filt_edata = filter(edata,!low_genes)
+dim(filt_edata)
+
+low_genes2 = rowMedians(as.matrix(edata)) < 5
+table(low_genes2,low_genes)
+filt_edata2 = filter(edata,!low_genes2)
+dim(filt_edata2)
+```
+
+
+After filtering we observe that using the `log` transform makes the distribution much more symmetric but there are still zeros. We could increase the filter to remove this issue if we needed to. 
+
+```{r}
+hist(log2(filt_edata[,1] + 1),col=2)
+```
+
+
+### More transforms
+
+There are a large number of other transforms depending on the type of data you are using. Some common ones are:
+
+* [Variance stabilizing transforms](https://en.wikipedia.org/wiki/Variance-stabilizing_transformation) which seek to remove a mean variance relationship among the data
+* [Box-Cox transforms](https://en.wikipedia.org/wiki/Power_transform) which seek to make the data approximately Normally distributed
+* [rlog transform](http://rpackages.ianhowson.com/bioc/DESeq2/man/rlog.html) - unique to genomics count data, this is a regularized version of the log transform that seeks to minimize differences at low count levels. 
+
+### Dependencies
+
+These are the packages that this tutorial depends on:
+
+* [BiocStyle](http://www.bioconductor.org/packages/release/bioc/html/BiocStyle.html)
+* [knitr](https://cran.r-project.org/package=knitr)
+* [RSkittleBrewer](https://github.com/alyssafrazee/RSkittleBrewer)
+* [Biobase](http://bioconductor.org/packages/release/bioc/html/Biobase.html)
+* [devtools](https://cran.r-project.org/package=devtools)
+* [dplyr](https://cran.r-project.org/package=dplyr)
+
+
+### Session information
+
+```{r session_info}
+devtools::session_info()
+```
