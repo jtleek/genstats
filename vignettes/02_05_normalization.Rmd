@@ -1,0 +1,142 @@
+---
+output:
+  BiocStyle::html_document
+---
+
+
+<!-- These options are set up specifically for Bioconductor flavored Markdown --> 
+
+
+<!-- rmarkdown v1 -->
+
+<!--
+%\VignetteIndexEntry{R Markdown Lecture}
+%\VignettePackage{BiocStyle}
+%\VignetteEngine{knitr::knitr}
+-->
+
+```{r style, results = 'asis',include=FALSE}
+BiocStyle::markdown()
+```
+
+
+# Quantile normalization
+
+Package: [genstats](https://github.com/jtleek/genstats)<br />
+Author: [Jeff Leek](www.jtleek.com) <br />
+Compilation date: `r Sys.Date()`
+
+### Set global plotting options
+
+```{r global_options}
+## see ch. 10 Hooks of Xie's knitr book
+knit_hooks$set(setPch = function(before, options, envir) {
+  if(before) par(pch = 19)
+})
+opts_chunk$set(setPch = TRUE)
+
+## Make the colors pretty
+library(RSkittleBrewer)
+trop = RSkittleBrewer("tropical")
+palette(trop)
+```
+
+
+### General principles
+
+* Preprocessing and normalization take raw data and turn it into processed data
+* These techniques are highly application specific
+* I'll illustrate a very general technique here ([quantile normalization](https://en.wikipedia.org/wiki/Quantile_normalization))
+* Then I'll show one or two processing examples for specific data types
+
+
+### Load some data
+
+We will use this expression set that combines two studies [Transcriptome genetics using second generation sequencing in a Caucasian population.](http://www.ncbi.nlm.nih.gov/pubmed?term=20220756%5Buid%5D) and [Understanding mechanisms underlying human gene expression variation with RNA sequencing.](http://www.ncbi.nlm.nih.gov/pubmed?term=20220758). These studies are different populations but we counted the same genes for both. Then we'll explore the differences. 
+
+```{r}
+con =url("http://bowtie-bio.sourceforge.net/recount/ExpressionSets/montpick_eset.RData")
+load(file=con)
+close(con)
+mp = montpick.eset
+pdata=pData(mp)
+edata=as.data.frame(exprs(mp))
+fdata = fData(mp)
+ls()
+```
+
+### Show distributions for log2 counts for several samples
+
+Here we show density plots for the first 20 samples
+
+```{r}
+edata = log2(edata + 1)
+edata = edata[rowMeans(edata) > 3, ]
+colramp = colorRampPalette(c(trop[3],"white",trop[2]))(20)
+plot(density(edata[,1]),col=colramp[1],lwd=3,ylim=c(0,.30))
+for(i in 2:20){lines(density(edata[,i]),lwd=3,col=colramp[i])}
+```
+
+### Quantile normalization
+
+Now we perform quantile normalization to make the distributions the same across samples. Note that near the tail the distributions aren't perfectly the same, but for the most part the distributions land right on top of each other. 
+
+```{r}
+library(preprocessCore)
+norm_edata = normalize.quantiles(as.matrix(edata))
+plot(density(norm_edata[,1]),col=colramp[1],lwd=3,ylim=c(0,.20))
+for(i in 2:20){lines(density(norm_edata[,i]),lwd=3,col=colramp[i])}
+```
+
+
+### Matching distributions leaves variability
+
+Normalization removes bulk differences due to technology. But there still may be differences you don't want after normalization. The only way to figure this out is to check. For example if we plot the quantile normalized data with the first 
+
+```{r}
+plot(norm_edata[1,],col=as.numeric(pdata$study))
+```
+
+
+You can see this in that the principal components still reflect variation between studies
+
+```{r}
+svd1 = svd(norm_edata - rowMeans(norm_edata))
+plot(svd1$v[,1],svd1$v[,2],xlab="PC1",ylab="PC2",
+     col=as.numeric(pdata$study))
+```
+
+
+### Further resources
+
+Preprocessing and normalization are highly application specific. Here I'm going to point you to resources for several specific types of data sets that you can follow. 
+
+* Preprocessing gene expression microarrays
+  - Affymetrix - [affy](http://www.bioconductor.org/packages/release/bioc/html/affy.html) 
+  - Illumina - [lumi](http://www.bioconductor.org/packages/release/bioc/html/lumi.html)
+* Preprocessing methylation microarray data
+  - Illumina 450k - [minfi](http://bioconductor.org/packages/release/bioc/html/minfi.html)
+* Preprocessing RNA-seq data
+  - Gene count based models - [Rsubread](http://bioconductor.org/packages/release/bioc/html/Rsubread.html), [cqn](http://www.bioconductor.org/packages/release/bioc/html/cqn.html), [edgeR User's guide](http://bioconductor.org/packages/release/bioc/vignettes/edgeR/inst/doc/edgeRUsersGuide.pdf)
+* Preprocessing Chip-seq data
+  - Peaks - [DiffBind](http://bioconductor.org/packages/release/bioc/html/DiffBind.html)
+* Preprocessing variant data
+  - Often not done in R, mostly for computational/historical reasons, but [VariantTools](http://bioconductor.org/packages/release/bioc/html/VariantTools.html) is good.
+
+
+### Dependencies
+
+These are the packages that this tutorial depends on:
+
+* [BiocStyle](http://www.bioconductor.org/packages/release/bioc/html/BiocStyle.html)
+* [knitr](https://cran.r-project.org/package=knitr)
+* [RSkittleBrewer](https://github.com/alyssafrazee/RSkittleBrewer)
+* [Biobase](http://bioconductor.org/packages/release/bioc/html/Biobase.html)
+* [devtools](https://cran.r-project.org/package=devtools)
+* [preprocessCore](http://www.bioconductor.org/packages/release/bioc/html/preprocessCore.html)
+
+### Session information
+
+```{r session_info}
+devtools::session_info()
+```
