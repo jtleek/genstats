@@ -3,7 +3,7 @@
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
 
-<title>The three tables in genomics</title>
+<title>Linear models</title>
 
 <script type="text/javascript">
 window.onload = function() {
@@ -263,126 +263,20 @@ hr {
 %\VignetteEngine{knitr::knitr}
 -->
 
-<h1>The three tables in genomics</h1>
+<h1>Linear models</h1>
 
 <p>Package: <a href="https://github.com/jtleek/genstats">genstats</a><br />
 Author: <a href="www.jtleek.com">Jeff Leek</a> <br />
-Compilation date: 2015-08-26</p>
+Compilation date: 2015-08-25</p>
 
-<h3>Download the data</h3>
+<h3>General principles</h3>
 
-<pre><code class="r">con=url(&quot;http://bowtie-bio.sourceforge.net/recount/ExpressionSets/bodymap_eset.RData&quot;)
-load(file=con)
-close(con)
-</code></pre>
-
-<h3>An expression set</h3>
-
-<p>This kind of object in R contains the three tables</p>
-
-<pre><code class="r">bm = bodymap.eset
-bm
-</code></pre>
-
-<pre><code>## ExpressionSet (storageMode: lockedEnvironment)
-## assayData: 52580 features, 19 samples 
-##   element names: exprs 
-## protocolData: none
-## phenoData
-##   sampleNames: ERS025098 ERS025092 ... ERS025091 (19 total)
-##   varLabels: sample.id num.tech.reps ... race (6 total)
-##   varMetadata: labelDescription
-## featureData
-##   featureNames: ENSG00000000003 ENSG00000000005 ... LRG_99 (52580
-##     total)
-##   fvarLabels: gene
-##   fvarMetadata: labelDescription
-## experimentData: use &#39;experimentData(object)&#39;
-## Annotation:
-</code></pre>
-
-<h3>Table 1: the genomics data</h3>
-
-<p>These are usually high dimensional measurements. In this case it is RNA-sequencing data. Each row is a gene and each column is a sample. </p>
-
-<pre><code class="r">exp_data = exprs(bm)
-dim(exp_data)
-</code></pre>
-
-<pre><code>## [1] 52580    19
-</code></pre>
-
-<pre><code class="r">head(exp_data,n=5)
-</code></pre>
-
-<pre><code>##                 ERS025098 ERS025092 ERS025085 ERS025088 ERS025089
-## ENSG00000000003      1354       216       215       924       725
-## ENSG00000000005       712       134         4      1495       119
-## ENSG00000000419       450       547       516       529       808
-## ENSG00000000457       188       368       196       386       156
-## ENSG00000000460        66        29         1        26        11
-##                 ERS025082 ERS025081 ERS025096 ERS025099 ERS025086
-## ENSG00000000003       125       796      1954       815       249
-## ENSG00000000005        20         7         0         0        16
-## ENSG00000000419       680       744       369       636       486
-## ENSG00000000457       259       436       288       187       553
-## ENSG00000000460         9        25        42        12        22
-##                 ERS025084 ERS025087 ERS025093 ERS025083 ERS025095
-## ENSG00000000003      4614      6548      5030      1450       781
-## ENSG00000000005       975       923       696        15        24
-## ENSG00000000419      1200      2823      2159       933       870
-## ENSG00000000457      1543      1194       876       655       862
-## ENSG00000000460       213        80        57        13        78
-##                 ERS025097 ERS025094 ERS025090 ERS025091
-## ENSG00000000003        69      1888       983         3
-## ENSG00000000005         0        20         4         0
-## ENSG00000000419       621      1026      1185       765
-## ENSG00000000457       242       569       609       782
-## ENSG00000000460        17       351        46        73
-</code></pre>
-
-<h3>Table 2: the phenotype data</h3>
-
-<p>This is the &ldquo;meta data&rdquo; or &ldquo;phenotype data&rdquo; that is what you typically associate the genomic data with. Each column is a variable and each row is a sample.</p>
-
-<pre><code class="r">pheno_data = pData(bm)
-dim(pheno_data)
-</code></pre>
-
-<pre><code>## [1] 19  6
-</code></pre>
-
-<pre><code class="r">head(pheno_data)
-</code></pre>
-
-<pre><code>##           sample.id num.tech.reps tissue.type gender age      race
-## ERS025098 ERS025098             2     adipose      F  73 caucasian
-## ERS025092 ERS025092             2     adrenal      M  60 caucasian
-## ERS025085 ERS025085             2       brain      F  77 caucasian
-## ERS025088 ERS025088             2      breast      F  29 caucasian
-## ERS025089 ERS025089             2       colon      F  68 caucasian
-## ERS025082 ERS025082             2       heart      M  77 caucasian
-</code></pre>
-
-<h3>Table 3: the feature data</h3>
-
-<p>This is information about the genes or other genomic features you are measuring. Each column is a variable and each row is a gene/feature. </p>
-
-<pre><code class="r">feature_data = fData(bm)
-dim(fData(bodymap.eset))
-</code></pre>
-
-<pre><code>## [1] 52580     1
-</code></pre>
-
-<pre><code class="r">fData(bodymap.eset)[1:10,,1]
-</code></pre>
-
-<pre><code>##  [1] ENSG00000000003 ENSG00000000005 ENSG00000000419 ENSG00000000457
-##  [5] ENSG00000000460 ENSG00000000938 ENSG00000000971 ENSG00000001036
-##  [9] ENSG00000001084 ENSG00000001167
-## 52580 Levels: ENSG00000000003 ENSG00000000005 ... LRG_99
-</code></pre>
+<ul>
+<li>Fitting &ldquo;lines&rdquo; to samples</li>
+<li>Only linear relationships are captured</li>
+<li>Be careful about outlier points</li>
+<li>Be careful about distributions of residuals </li>
+</ul>
 
 <h3>Dependencies</h3>
 
@@ -394,6 +288,9 @@ dim(fData(bodymap.eset))
 <li><a href="https://github.com/alyssafrazee/RSkittleBrewer">RSkittleBrewer</a></li>
 <li><a href="http://bioconductor.org/packages/release/bioc/html/Biobase.html">Biobase</a></li>
 <li><a href="https://cran.r-project.org/package=devtools">devtools</a></li>
+<li><a href="https://cran.r-project.org/package=dplyr">dplyr</a></li>
+<li><a href="http://bioconductor.org/packages/release/data/annotation/html/org.Hs.eg.db.html">org.Hs.eg.db</a></li>
+<li><a href="http://bioconductor.org/packages/release/bioc/html/AnnotationDbi.html">AnnotationDbi</a></li>
 </ul>
 
 <h3>Session information</h3>
@@ -424,7 +321,6 @@ dim(fData(bodymap.eset))
 ##  BiocGenerics   * 0.14.0  2015-04-17
 ##  BiocStyle      * 1.6.0   2015-04-17
 ##  bitops           1.0-6   2013-08-17
-##  broom          * 0.3.7   2015-05-06
 ##  caTools          1.17.1  2014-09-10
 ##  cluster          2.0.3   2015-07-21
 ##  colorspace       1.2-6   2015-03-11
@@ -460,14 +356,12 @@ dim(fData(bodymap.eset))
 ##  MASS           * 7.3-43  2015-07-16
 ##  memoise          0.2.1   2014-04-22
 ##  mime             0.3     2015-03-29
-##  mnormt           1.5-3   2015-05-25
 ##  munsell          0.4.2   2013-07-11
 ##  nnet             7.3-10  2015-06-29
 ##  org.Hs.eg.db   * 3.1.2   2015-07-17
 ##  plyr             1.8.3   2015-06-12
 ##  preprocessCore * 1.30.0  2015-04-17
 ##  proto            0.3-10  2012-12-22
-##  psych            1.5.6   2015-07-08
 ##  R6               2.1.1   2015-08-19
 ##  RColorBrewer     1.1-2   2014-12-07
 ##  Rcpp             0.12.0  2015-07-25
@@ -483,7 +377,6 @@ dim(fData(bodymap.eset))
 ##  stringi          0.5-5   2015-06-29
 ##  stringr          1.0.0   2015-04-30
 ##  survival       * 2.38-3  2015-07-02
-##  tidyr            0.2.0   2014-12-05
 ##  UsingR         * 2.0-5   2015-08-06
 ##  whisker          0.3-2   2013-04-28
 ##  xml2             0.1.1   2015-06-02
@@ -497,7 +390,6 @@ dim(fData(bodymap.eset))
 ##  Bioconductor                                
 ##  CRAN (R 3.2.0)                              
 ##  CRAN (R 3.2.0)                              
-##  CRAN (R 3.2.0)                              
 ##  CRAN (R 3.2.1)                              
 ##  CRAN (R 3.2.0)                              
 ##  CRAN (R 3.2.1)                              
@@ -532,14 +424,12 @@ dim(fData(bodymap.eset))
 ##  CRAN (R 3.2.1)                              
 ##  CRAN (R 3.2.0)                              
 ##  CRAN (R 3.2.0)                              
-##  CRAN (R 3.2.1)                              
 ##  CRAN (R 3.2.0)                              
 ##  CRAN (R 3.2.1)                              
 ##  Bioconductor                                
 ##  CRAN (R 3.2.1)                              
 ##  Bioconductor                                
 ##  CRAN (R 3.2.0)                              
-##  CRAN (R 3.2.1)                              
 ##  CRAN (R 3.2.1)                              
 ##  CRAN (R 3.2.0)                              
 ##  CRAN (R 3.2.1)                              
@@ -555,7 +445,6 @@ dim(fData(bodymap.eset))
 ##  CRAN (R 3.2.1)                              
 ##  CRAN (R 3.2.0)                              
 ##  CRAN (R 3.2.1)                              
-##  CRAN (R 3.2.0)                              
 ##  CRAN (R 3.2.2)                              
 ##  CRAN (R 3.2.0)                              
 ##  CRAN (R 3.2.1)                              
