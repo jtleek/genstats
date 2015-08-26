@@ -1,0 +1,169 @@
+---
+output:
+  BiocStyle::html_document
+---
+
+
+<!-- These options are set up specifically for Bioconductor flavored Markdown --> 
+
+
+<!-- rmarkdown v1 -->
+
+<!--
+%\VignetteIndexEntry{R Markdown Lecture}
+%\VignettePackage{BiocStyle}
+%\VignetteEngine{knitr::knitr}
+-->
+
+```{r style, results = 'asis',include=FALSE}
+BiocStyle::markdown()
+```
+
+```{r global_options,include=FALSE}
+## see ch. 10 Hooks of Xie's knitr book
+knit_hooks$set(setPch = function(before, options, envir) {
+  if(before) par(pch = 19)
+})
+opts_chunk$set(setPch = TRUE)
+library(RSkittleBrewer)
+# Make the colors pretty
+trop = RSkittleBrewer("tropical")
+palette(trop)
+```
+
+
+# Batch effects
+
+Package: [genstats](https://github.com/jtleek/genstats)<br />
+Author: [Jeff Leek](www.jtleek.com) <br />
+Compilation date: `r Sys.Date()`
+
+### Download the data
+
+
+The analyses performed in this experiment are based on gene expression measurements from a bladder cancer study: [Gene expression in the urinary bladder: a common carcinoma in situ gene expression signature exists disregarding histopathological classification.](http://cancerres.aacrjournals.org/content/64/11/4040.full.pdf) The data can be loaded from the [bladderbatch](http://bioconductor.org/packages/release/data/experiment/html/bladderbatch.html) data package. 
+
+```{r}
+library(sva)
+library(bladderbatch)
+data(bladderdata)
+```
+
+### Set up the data
+
+```{r}
+pheno = pData(bladderEset)
+edata = exprs(bladderEset)
+```
+
+### Adjusting for batch effects with a linear model
+
+We will use two models. One with the variable we care about (cancer status) and the other that is just the known adjustment variables (in this case we will assume none) 
+
+```{r}
+mod = model.matrix(~as.factor(cancer) + as.factor(batch),data=pheno)
+fit = lm.fit(mod,t(edata))
+hist(fit$coefficients[2,],col=2,breaks=100)
+```
+
+This will only work if the batch effects aren't too highly correlated with the outcome. Let's check that
+
+```{r}
+table(pheno$cancer,pheno$batch)
+```
+
+
+### Adjusting for batch effects with Combat
+
+Another approach is to use Combat. Combat returns a "cleaned" data matrix after batch effects have been removed. Here we pass a model matrix with any known adjustment variables and a second parameter that is the batch variable.  
+
+```{r}
+batch = pheno$batch
+modcombat = model.matrix(~1, data=pheno)
+modcancer = model.matrix(~cancer, data=pheno)
+combat_edata = ComBat(dat=edata, batch=batch, mod=modcombat, par.prior=TRUE, prior.plots=FALSE)
+combat_fit = lm.fit(modcancer,t(combat_edata))
+hist(combat_fit$coefficients[2,],col=2,breaks=100)
+```
+
+### Comparing Combat and linear adjustment 
+
+We can compare the estimated coefficients from Combat and linear adjustment by looking at the right coefficients for each model. 
+
+```{r}
+plot(fit$coefficients[2,],combat_fit$coefficients[2,],col=2,
+      xlab="Linear Model",ylab="Combat",xlim=c(-5,5),ylim=c(-5,5))
+abline(c(0,1),col=1,lwd=3)
+```
+
+
+
+### Adjusting for batch effects with sva
+
+
+First we need to estimate the surrogate variables. To do this, we need to build a model with any known adjustment variables and the variable we care about `mod` and another model with only the adjustment variables. Here we won't adjust for anything to see if `sva` can "discover" the batch effect. 
+
+```{r}
+mod = model.matrix(~cancer,data=pheno)
+mod0 = model.matrix(~1, data=pheno)
+sva1 = sva(edata,mod,mod0,n.sv=2)
+```
+
+See if any of the variables correlate with batch
+
+```{r}
+summary(lm(sva1$sv ~ pheno$batch))
+boxplot(sva1$sv[,2] ~ pheno$batch)
+points(sva1$sv[,2] ~ jitter(as.numeric(pheno$batch)),col=as.numeric(pheno$batch))
+```
+
+Add the surrogate variables to the model matrix and perform the model fit
+
+```{r}
+modsv = cbind(mod,sva1$sv)
+fitsv = lm.fit(modsv,t(edata))
+```
+
+Compare the fit from surrogate variable analysis to the other two. 
+
+```{r}
+par(mfrow=c(1,2))
+plot(fitsv$coefficients[2,],combat_fit$coefficients[2,],col=2,
+      xlab="SVA",ylab="Combat",xlim=c(-5,5),ylim=c(-5,5))
+abline(c(0,1),col=1,lwd=3)
+plot(fitsv$coefficients[2,], fit$coefficients[2,],col=2,
+      xlab="SVA",ylab="linear model",xlim=c(-5,5),ylim=c(-5,5))
+abline(c(0,1),col=1,lwd=3)
+```
+
+
+### Note and furthe resources
+
+You can read more about batch effect corrections in the [sva package vignette](https://www.bioconductor.org/packages/release/bioc/html/sva.html).There are actually a large number of variants on the sva batch correction idea. Some good ones are:
+
+* [PEER](https://www.sanger.ac.uk/resources/software/peer/)
+* [RUV](http://www.bioconductor.org/packages/release/bioc/html/RUVnormalize.html)
+
+
+
+### Dependencies
+
+These are the packages that this tutorial depends on:
+
+* [BiocStyle](http://www.bioconductor.org/packages/release/bioc/html/BiocStyle.html)
+* [knitr](https://cran.r-project.org/package=knitr)
+* [RSkittleBrewer](https://github.com/alyssafrazee/RSkittleBrewer)
+* [Biobase](http://bioconductor.org/packages/release/bioc/html/Biobase.html)
+* [devtools](https://cran.r-project.org/package=devtools)
+* [dplyr](https://cran.r-project.org/package=dplyr)
+* [org.Hs.eg.db](http://bioconductor.org/packages/release/data/annotation/html/org.Hs.eg.db.html)
+* [AnnotationDbi](http://bioconductor.org/packages/release/bioc/html/AnnotationDbi.html)
+
+
+### Session information
+
+```{r session_info}
+devtools::session_info()
+```
+
+
