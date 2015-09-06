@@ -49,8 +49,8 @@ biocLite(c("Biobase","goseq","DESeq2"))
 Here we are going to follow along with the tutorial on [goseq](http://www.bioconductor.org/packages/release/bioc/vignettes/goseq/inst/doc/goseq.pdf). You can see what genomes are supported by this package
 
 ```{r}
-supportedGenomes()
-supportedGeneIDs()
+head(supportedGenomes())
+head(supportedGeneIDs())
 ```
 
 ## An example of a goseq analysis

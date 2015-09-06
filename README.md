@@ -12,7 +12,7 @@ You can see the list of lecture notes and open them using the vignette command:
 
 ```{r}
 vignette(package="genstats")
-vignette("rmarkdown")
+vignette("01_13_clustering")
 ```
 
 For more information check out: 

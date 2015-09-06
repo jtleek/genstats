@@ -38,8 +38,8 @@ suppressPackageStartupMessages({
 #  biocLite(c("Biobase","goseq","DESeq2"))
 
 ## ------------------------------------------------------------------------
-supportedGenomes()
-supportedGeneIDs()
+head(supportedGenomes())
+head(supportedGeneIDs())
 
 ## ------------------------------------------------------------------------
 temp_data =read.table(system.file("extdata","Li_sum.txt",
