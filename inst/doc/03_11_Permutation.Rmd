@@ -97,31 +97,12 @@ quantile(tstats_obj0$statistic)
 quantile(tstats_obj$statistic)
 ```
 
-
-## Calculating empirical permutation p-values with edge
-
-Often when you permute you are trying to calculate an empirical p-value. To do this we can compare each observed statistic to the permuted statistics. You can either compare within a single gene (argument `pooled=FALSE` in the `empPvals` function) or pooling the permuted statistics across multiple genes (argument `pooled=TRUE` in the `empPvals` function, the default). 
-
-```{r}
-set.seed(3333)
-B = 1000
-tstat0 = matrix(NA,nrow=dim(edata)[1],ncol=B)
-tstat = tstats_obj$statistic
-for(i in 1:B){
-  strain0 = sample(strain)
-  tstat0[,i] = rowttests(edata,strain0)$statistic
-}
-
-pvals = empPvals(tstat,tstat0)
-hist(pvals,col=2)
-```
-
 ## More information
 
 Permutation is widely applied and has many varieties. 
 
 * You can find different permutation approaches for more complicated study designs in teh [permute package](https://cran.r-project.org/web/packages/permute/vignettes/permutations.pdf)
-* 
+* An alternative is bootstrapping. This is a whole major area as well. [This book](http://www.amazon.com/Introduction-Bootstrap-Monographs-Statistics-Probability/dp/0412042312) and the [boot package](https://cran.r-project.org/web/packages/boot/) are good places to start/
 
 ## Session information
 

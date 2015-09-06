@@ -1,0 +1,192 @@
+---
+title: eQTL
+author: Jeff Leek
+output:
+  rmarkdown::html_document:
+    toc: true
+  vignette: >  
+    %\VignetteIndexEntry{eQTL in R}
+    %\VignetteEngine{knitr::rmarkdown}
+    \usepackage[utf8]{inputenc}
+---
+
+```{r front, child="./../front.Rmd", echo=FALSE}
+```
+
+
+## Dependencies
+
+This document depends on the following packages:
+
+```{r load_hidden, echo=FALSE, results="hide", warning=FALSE}
+suppressPackageStartupMessages({
+  library(devtools)
+  library(Biobase)
+  library(MatrixEQTL)
+})
+```
+
+```{r load}
+  library(devtools)
+  library(Biobase)
+  library(MatrixEQTL)
+```
+
+
+To install these packages you can use the code (or if you are compiling the document, remove the `eval=FALSE` from the chunk.)
+
+```{r install_packages, eval=FALSE}
+install.packages(c("devtools","MatrixEQTL"))
+source("http://www.bioconductor.org/biocLite.R")
+biocLite(c("Biobase"))
+```
+
+
+## Download the data
+
+Here we are going to follow along with the tutorial on [MatrixEQTL](http://www.bios.unc.edu/research/genomic_software/Matrix_eQTL/runit.html). First we find the files
+
+```{r}
+base.dir = find.package("MatrixEQTL")
+SNP_file_name = paste(base.dir, "/data/SNP.txt", sep="");
+expression_file_name = paste(base.dir, "/data/GE.txt", sep="")
+covariates_file_name = paste(base.dir, "/data/Covariates.txt", sep="")
+output_file_name = tempfile()
+```
+
+Next we load the data so we can see it
+
+```{r}
+expr = read.table(expression_file_name,sep="\t",
+                  header=T,row.names=1)
+expr[1,]
+
+snps = read.table(SNP_file_name,sep="\t",
+                  header=T,row.names=1)
+snps[1,]
+
+cvrt = read.table(covariates_file_name,sep="\t",
+                  header=T,row.names=1)
+```
+
+
+## eQTL is linear regession
+
+The simplest eQTL analysis just computes linear regression models for each SNP/gene pair. 
+
+```{r}
+e1 = as.numeric(expr[1,])
+s1 = as.numeric(snps[1,])
+lm1 = lm(e1 ~ s1)
+tidy(lm1)
+```
+
+We can visualize the data and the model fits
+
+```{r}
+plot(e1 ~ jitter(s1),
+     col=(s1+1),xaxt="n",xlab="Genotype",ylab="Expression")
+axis(1,at=c(0:2),labels=c("AA","Aa","aa"))
+lines(lm1$fitted ~ s1,type="b",pch=15,col="darkgrey")
+```
+
+## Fitting many eQTL models with MatrixEQTL
+
+### Set general parameters 
+We need to set up the p-value cutoff and the error model (in this case assuming independent errors)
+
+```{r}
+pvOutputThreshold = 1e-2
+errorCovariance = numeric()
+useModel = modelLINEAR
+```
+
+### Set the data up
+
+Now we need to set up the snp and gene expression data in the special format required by the `MatrixEQTL` package
+
+```{r}
+snps = SlicedData$new()
+snps$fileDelimiter = "\t"     # the TAB character
+snps$fileOmitCharacters = "NA" # denote missing values;
+snps$fileSkipRows = 1          # one row of column labels
+snps$fileSkipColumns = 1       # one column of row labels
+snps$fileSliceSize = 2000     # read file in pieces of 2,000 rows
+snps$LoadFile( SNP_file_name )
+```
+
+
+```{r}
+gene = SlicedData$new()
+gene$fileDelimiter = "\t"      # the TAB character
+gene$fileOmitCharacters = "NA" # denote missing values;
+gene$fileSkipRows = 1          # one row of column labels
+gene$fileSkipColumns = 1      # one column of row labels
+gene$fileSliceSize = 2000      # read file in pieces of 2,000 rows
+gene$LoadFile(expression_file_name)
+```
+
+```{r}
+cvrt = SlicedData$new()
+```
+
+### Running MatrixEQTL
+
+We can now run the code to calculate the eQTL that we are interested in
+
+```{r}
+me = Matrix_eQTL_engine(
+    snps = snps,
+    gene = gene,
+    cvrt = cvrt,
+    output_file_name = NULL,
+    pvOutputThreshold = pvOutputThreshold,
+    useModel = useModel, 
+    errorCovariance = errorCovariance, 
+    verbose = TRUE,
+    pvalue.hist = TRUE,
+    min.pv.by.genesnp = FALSE,
+    noFDRsaveMemory = FALSE);
+```
+
+### Understanding the results
+
+We can make a plot of all the p-values from the tests
+
+```{r}
+plot(me)
+```
+
+We can also figure look at the number and type of eQTL
+
+```{r}
+me$all$neqtls
+me$all$eqtls
+```
+
+
+
+## More information
+
+eQTL is an entire field of research.
+
+* [MatrixEQTL package](http://www.bios.unc.edu/research/genomic_software/Matrix_eQTL/)
+* [MatrixEQTL paper](http://bioinformatics.oxfordjournals.org/content/28/10/1353.abstract?keytype=ref&ijkey=zjMWpHTAUk7OJFw)
+* [Surrogate variables applied to eQTL](http://journals.plos.org/plosgenetics/article?id=10.1371/journal.pgen.0030161)
+* [A Bayesian sva framework for eQTL](http://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1000770)
+* [Bioconductor eQTL workflow](http://www.bioconductor.org/help/workflows/eQTL/)
+
+
+
+## Session information
+
+Here is the session information 
+
+```{r session_info}
+devtools::session_info()
+```
+
+It is also useful to compile the time the document was processed. This document was processed on: `r Sys.Date()`.
+
+
+

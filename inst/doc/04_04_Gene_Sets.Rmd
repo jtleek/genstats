@@ -1,0 +1,149 @@
+---
+title: Gene sets in R
+author: Jeff Leek
+output:
+  rmarkdown::html_document:
+    toc: true
+  vignette: >  
+    %\VignetteIndexEntry{Gene sets in R}
+    %\VignetteEngine{knitr::rmarkdown}
+    \usepackage[utf8]{inputenc}
+---
+
+```{r front, child="./../front.Rmd", echo=FALSE}
+```
+
+
+## Dependencies
+
+This document depends on the following packages:
+
+```{r load_hidden, echo=FALSE, results="hide", warning=FALSE}
+suppressPackageStartupMessages({
+  library(devtools)
+  library(Biobase)
+  library(goseq)
+  library(DESeq2)
+})
+```
+
+```{r load}
+  library(devtools)
+  library(Biobase)
+  library(goseq)
+  library(DESeq2)
+```
+
+
+To install these packages you can use the code (or if you are compiling the document, remove the `eval=FALSE` from the chunk.)
+
+```{r install_packages, eval=FALSE}
+install.packages(c("devtools","MatrixEQTL"))
+source("http://www.bioconductor.org/biocLite.R")
+biocLite(c("Biobase","goseq","DESeq2"))
+```
+
+
+## Download the data
+
+Here we are going to follow along with the tutorial on [goseq](http://www.bioconductor.org/packages/release/bioc/vignettes/goseq/inst/doc/goseq.pdf). You can see what genomes are supported by this package
+
+```{r}
+supportedGenomes()
+supportedGeneIDs()
+```
+
+## An example of a goseq analysis
+
+### Load the data
+
+Here we load the example frmo the `goseq` package. 
+```{r}
+temp_data =read.table(system.file("extdata","Li_sum.txt",
+                                     package="goseq"),sep="\t",
+                                     header=TRUE,
+                                     stringsAsFactors=FALSE)
+expr= temp_data[,-1]
+rownames(expr) = temp_data[,1]
+expr = expr[rowMeans(expr) > 5,]
+grp=factor(rep(c("Control","Treated"),times=c(4,3)))
+pdata  = data.frame(grp)
+```
+
+### Perform a differential expression analysis
+
+Now we perform a differential expression analysis for the group variable with `DESeq2`
+
+```{r}
+de = DESeqDataSetFromMatrix(expr, pdata, ~grp)
+de_fit = DESeq(de)
+de_results = results(de_fit)
+```
+
+Get the differentially expressed genes after FDR correction
+
+```{r}
+genes = as.integer(de_results$padj < 0.05)
+not_na = !is.na(genes)
+names(genes) = rownames(expr)
+genes = genes[not_na]
+```
+
+### Pick the right genome
+
+Here we look at some of the automatically supported genomes
+
+```{r}
+head(supportedGenomes(),n=12)[,1:4]
+```
+
+We need to set up a weighting function for all the genes in that genome
+
+```{r}
+pwf=nullp(genes,"hg19","ensGene")
+head(pwf)
+```
+
+### Perform the enrichment analysis parametrically
+
+Here we use a parametric test to look for differences in enrichment with respect to different categories. This is the 2 x 2 table approach. You can also use random sampling to define the null distribution by setting the parameters `method="Sampling"` and `repcnt=1000` for the number of null repititions. 
+
+```{r}
+GO.wall=goseq(pwf,"hg19","ensGene")
+head(GO.wall)
+```
+
+### Limiting yourself to a single category you are interested in
+
+Suppose there is a particular category or function you are interested in. You can limit to just that category
+
+```{r}
+GO.MF=goseq(pwf,"hg19","ensGene",test.cats=c("GO:MF"))
+head(GO.MF)
+```
+
+
+
+
+## More information
+
+Gene set and other enrichment analyses are widely used to make sense of genomic results. Here are a couple of good places to start
+
+* [geneontology website](http://geneontology.org/)
+* [goseq vignette](http://www.bioconductor.org/packages/release/bioc/vignettes/goseq/inst/doc/goseq.pdf)
+* [seqGSEA package](http://www.bioconductor.org/packages/release/bioc/html/SeqGSEA.html)
+* [An early gene set enrichment paper](http://www.pnas.org/content/102/43/15545.full)
+
+
+## Session information
+
+Here is the session information 
+
+```{r session_info}
+devtools::session_info()
+```
+
+It is also useful to compile the time the document was processed. This document was processed on: `r Sys.Date()`.
+
+
+

@@ -1,0 +1,192 @@
+---
+title: Permutation
+author: Jeff Leek
+output:
+  rmarkdown::html_document:
+    toc: true
+  vignette: >  
+    %\VignetteIndexEntry{Permutation}
+    %\VignetteEngine{knitr::rmarkdown}
+    \usepackage[utf8]{inputenc}
+---
+
+```{r front, child="./../front.Rmd", echo=FALSE}
+```
+
+
+## Dependencies
+
+This document depends on the following packages:
+
+```{r load_hidden, echo=FALSE, results="hide", warning=FALSE}
+suppressPackageStartupMessages({
+  library(devtools)
+  library(Biobase)
+  library(limma)
+  library(edge)
+  library(genefilter)
+  library(qvalue)
+})
+```
+
+```{r load}
+  library(devtools)
+  library(Biobase)
+  library(limma)
+  library(edge)
+  library(genefilter)
+  library(qvalue)
+```
+
+
+To install these packages you can use the code (or if you are compiling the document, remove the `eval=FALSE` from the chunk.)
+
+```{r install_packages, eval=FALSE}
+install.packages(c("devtools"))
+source("http://www.bioconductor.org/biocLite.R")
+biocLite(c("Biobase","limma","genefilter","jdstorey/edge","qvalue"))
+```
+
+
+## Download the data
+
+
+Here we are going to use some data from the paper [Evaluating gene expression in C57BL/6J and DBA/2J mouse striatum using RNA-Seq and microarrays.](http://www.ncbi.nlm.nih.gov/pubmed?term=21455293) that is a comparative RNA-seq analysis of different mouse strains.
+
+```{r}
+con =url("http://bowtie-bio.sourceforge.net/recount/ExpressionSets/bottomly_eset.RData")
+load(file=con)
+close(con)
+bot = bottomly.eset
+pdata=pData(bot)
+edata=as.matrix(exprs(bot))
+fdata = fData(bot)
+ls()
+```
+
+## Transform the data
+
+Here we will transform the data and remove lowly expressed genes. 
+
+```{r}
+edata = log2(as.matrix(edata) + 1)
+edata = edata[rowMeans(edata) > 10, ]
+```
+
+## Calculate p-values parametrically
+
+There are a number of ways to calculate p-values directly. Here are a couple of examples, but there are many data-specific ways of calculating them using packages like `snpStats` or `DESeq2` or `diffbind`. 
+
+### With genefilter 
+ 
+
+```{r}
+fstats_obj = rowFtests(edata,as.factor(pdata$strain))
+hist(fstats_obj$p.value,col=2)
+```
+
+### Adjusting for variables with edge
+
+If you want to adjust for variables you need to use `edge` 
+
+```{r}
+
+edge_study = build_study(edata, grp = pdata$strain, 
+                         adj.var = as.factor(pdata$lane.number))
+de_obj = lrt(edge_study)
+qval = qvalueObj(de_obj)
+hist(qval$pvalues,col=3)
+```
+
+### P-values for moderated statistics with limma
+
+```{r}
+mod = model.matrix(~ pdata$strain + pdata$lane.number)
+fit_limma = lmFit(edata,mod)
+ebayes_limma = eBayes(fit_limma)
+limma_pvals = topTable(ebayes_limma,number=dim(edata)[1])$P.Value
+hist(limma_pvals,col=4)
+```
+
+## Calculating empirical permutation p-values with edge
+
+Often when you permute you are trying to calculate an empirical p-value. To do this we can compare each observed statistic to the permuted statistics. You can either compare within a single gene (argument `pooled=FALSE` in the `empPvals` function) or pooling the permuted statistics across multiple genes (argument `pooled=TRUE` in the `empPvals` function, the default). 
+
+```{r}
+set.seed(3333)
+B = 1000
+tstats_obj = rowttests(edata,pdata$strain)
+tstat0 = matrix(NA,nrow=dim(edata)[1],ncol=B)
+tstat = tstats_obj$statistic
+strain = pdata$strain
+for(i in 1:B){
+  strain0 = sample(strain)
+  tstat0[,i] = rowttests(edata,strain0)$statistic
+}
+
+emp_pvals = empPvals(tstat,tstat0)
+hist(emp_pvals,col=2)
+```
+
+## Multiple testing
+
+To correct for multiple testing you can use the Bonferroni correction or different FDR corrections. 
+
+
+### Bonferroni and Benjamini-Hochberg FDR correction with p.adjust
+
+You can use the `p.adjust` function to get "multiple testing corrected" p-values which you can then use to control error rates. 
+
+```{r}
+fp_bonf = p.adjust(fstats_obj$p.value,method="bonferroni")
+hist(fp_bonf,col=3)
+quantile(fp_bonf)
+
+fp_bh = p.adjust(fstats_obj$p.value,method="BH")
+hist(fp_bh,col=3)
+quantile(fp_bh)
+```
+
+### Adjusted p-values from limma
+
+```{r}
+limma_pvals_adj = topTable(ebayes_limma,number=dim(edata)[1])$adj.P.Val
+hist(limma_pvals_adj,col=2)
+quantile(limma_pvals_adj)
+```
+
+### Direct q-values
+
+```{r}
+qval_limma = qvalue(limma_pvals)
+summary(qval_limma)
+qval$pi0
+```
+
+### q-values using edge
+
+```{r}
+qval = qvalueObj(de_obj)
+summary(qval)
+```
+
+## More information
+
+Multiple testing is one of the most commmonly used tools in statistical genomics. 
+
+* [Statistical significance for genome-wide studies](http://www.pnas.org/content/100/16/9440.full) is a great place to start. 
+* The [qvalue package vignette](https://www.bioconductor.org/packages/release/bioc/vignettes/qvalue/inst/doc/qvalue.pdf) is also informative. 
+* This is a nice review on [How does multiple testing correction work?](http://www.ncbi.nlm.nih.gov/pmc/articles/PMC2907892/)
+
+## Session information
+
+Here is the session information 
+
+```{r session_info}
+devtools::session_info()
+```
+
+It is also useful to compile the time the document was processed. This document was processed on: `r Sys.Date()`.
+
+
+

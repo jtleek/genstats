@@ -22,51 +22,61 @@ knitr::knit_hooks$set(small.mar = function(before, options, envir) {
 suppressPackageStartupMessages({
   library(devtools)
   library(Biobase)
-  library(limma)
-  library(edge)
-  library(genefilter)
+  library(goseq)
+  library(DESeq2)
 })
 
 ## ----load----------------------------------------------------------------
   library(devtools)
   library(Biobase)
-  library(limma)
-  library(edge)
-  library(genefilter)
+  library(goseq)
+  library(DESeq2)
 
 ## ----install_packages, eval=FALSE----------------------------------------
-#  install.packages(c("devtools"))
+#  install.packages(c("devtools","MatrixEQTL"))
 #  source("http://www.bioconductor.org/biocLite.R")
-#  biocLite(c("Biobase","limma","genefilter","jdstorey/edge"))
+#  biocLite(c("Biobase","goseq","DESeq2"))
 
 ## ------------------------------------------------------------------------
-con =url("http://bowtie-bio.sourceforge.net/recount/ExpressionSets/bottomly_eset.RData")
-load(file=con)
-close(con)
-bot = bottomly.eset
-pdata=pData(bot)
-edata=as.matrix(exprs(bot))
-fdata = fData(bot)
-ls()
+supportedGenomes()
+supportedGeneIDs()
 
 ## ------------------------------------------------------------------------
-edata = log2(as.matrix(edata) + 1)
-edata = edata[rowMeans(edata) > 10, ]
+temp_data =read.table(system.file("extdata","Li_sum.txt",
+                                     package="goseq"),sep="\t",
+                                     header=TRUE,
+                                     stringsAsFactors=FALSE)
+expr= temp_data[,-1]
+rownames(expr) = temp_data[,1]
+expr = expr[rowMeans(expr) > 5,]
+grp=factor(rep(c("Control","Treated"),times=c(4,3)))
+pdata  = data.frame(grp)
 
 ## ------------------------------------------------------------------------
-tstats_obj = rowttests(edata,pdata$strain)
-hist(tstats_obj$statistic,col=2,xlim=c(-5,2))
+de = DESeqDataSetFromMatrix(expr, pdata, ~grp)
+de_fit = DESeq(de)
+de_results = results(de_fit)
 
 ## ------------------------------------------------------------------------
-set.seed(135)
-strain = pdata$strain
-strain0 = sample(strain)
-tstats_obj0 = rowttests(edata,strain0)
-hist(tstats_obj0$statistic,col=2,xlim=c(-5,2))
+genes = as.integer(de_results$padj < 0.05)
+not_na = !is.na(genes)
+names(genes) = rownames(expr)
+genes = genes[not_na]
 
 ## ------------------------------------------------------------------------
-quantile(tstats_obj0$statistic)
-quantile(tstats_obj$statistic)
+head(supportedGenomes(),n=12)[,1:4]
+
+## ------------------------------------------------------------------------
+pwf=nullp(genes,"hg19","ensGene")
+head(pwf)
+
+## ------------------------------------------------------------------------
+GO.wall=goseq(pwf,"hg19","ensGene")
+head(GO.wall)
+
+## ------------------------------------------------------------------------
+GO.MF=goseq(pwf,"hg19","ensGene",test.cats=c("GO:MF"))
+head(GO.MF)
 
 ## ----session_info--------------------------------------------------------
 devtools::session_info()
