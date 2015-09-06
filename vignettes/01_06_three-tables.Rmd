@@ -1,57 +1,58 @@
 ---
+title: The three tables in genomics
+author: Jeff Leek
 output:
-  BiocStyle::html_document
+  rmarkdown::html_document:
+    toc: true
+  vignette: >  
+    %\VignetteIndexEntry{The three tables in genomics}
+    %\VignetteEngine{knitr::rmarkdown}
+    \usepackage[utf8]{inputenc}
 ---
 
-
-<!-- These options are set up specifically for Bioconductor flavored Markdown --> 
-
-
-<!-- rmarkdown v1 -->
-
-<!--
-%\VignetteIndexEntry{R Markdown Lecture}
-%\VignettePackage{BiocStyle}
-%\VignetteEngine{knitr::knitr}
--->
-
-```{r style, results = 'asis',include=FALSE}
-BiocStyle::markdown()
+```{r front, child="./../front.Rmd", echo=FALSE}
 ```
 
-```{r global_options,include=FALSE}
-## see ch. 10 Hooks of Xie's knitr book
-knit_hooks$set(setPch = function(before, options, envir) {
-  if(before) par(pch = 19)
+
+## Dependencies
+
+This document depends on the following packages:
+
+```{r load_hidden, echo=FALSE, results="hide", warning=FALSE}
+suppressPackageStartupMessages({
+   library(devtools)
+  library(Biobase)
 })
-opts_chunk$set(setPch = TRUE)
-library(RSkittleBrewer)
-# Make the colors pretty
-trop = RSkittleBrewer("tropical")
-palette(trop)
+```
+
+```{r load}
+  library(devtools)
+  library(Biobase)
 ```
 
 
-# The three tables in genomics
+To install these packages you can use the code (or if you are compiling the document, remove the `eval=FALSE` from the chunk.)
 
-Package: [genstats](https://github.com/jtleek/genstats)<br />
-Author: [Jeff Leek](www.jtleek.com) <br />
-Compilation date: `r Sys.Date()`
+```{r, eval=FALSE}
+install.packages("devtools")
+source("http://www.bioconductor.org/biocLite.R")
+biocLite(c("Biobase"))
+```
 
 
-### Download the data
+## Load the data from the web
 
-```{r}
+```{r load_data}
 con=url("http://bowtie-bio.sourceforge.net/recount/ExpressionSets/bodymap_eset.RData")
 load(file=con)
 close(con)
 ```
 
-### An expression set
+## An expression set
 
 This kind of object in R contains the three tables
 
-```{r}
+```{r expression_set}
 bm = bodymap.eset
 bm
 ```
@@ -59,7 +60,7 @@ bm
 ### Table 1: the genomics data
 
 These are usually high dimensional measurements. In this case it is RNA-sequencing data. Each row is a gene and each column is a sample. 
-```{r}
+```{r expression_data}
 exp_data = exprs(bm)
 dim(exp_data)
 head(exp_data,n=5)
@@ -69,7 +70,7 @@ head(exp_data,n=5)
 
 This is the "meta data" or "phenotype data" that is what you typically associate the genomic data with. Each column is a variable and each row is a sample.
 
-```{r}
+```{r pheno_data}
 pheno_data = pData(bm)
 dim(pheno_data)
 head(pheno_data)
@@ -79,29 +80,21 @@ head(pheno_data)
 
 This is information about the genes or other genomic features you are measuring. Each column is a variable and each row is a gene/feature. 
 
-```{r}
+```{r feature_data}
 feature_data = fData(bm)
 dim(fData(bodymap.eset))
 fData(bodymap.eset)[1:10,,1]
 ```
 
-### Dependencies
+## Session information
 
-These are the packages that this tutorial depends on:
-
-* [BiocStyle](http://www.bioconductor.org/packages/release/bioc/html/BiocStyle.html)
-* [knitr](https://cran.r-project.org/package=knitr)
-* [RSkittleBrewer](https://github.com/alyssafrazee/RSkittleBrewer)
-* [Biobase](http://bioconductor.org/packages/release/bioc/html/Biobase.html)
-* [devtools](https://cran.r-project.org/package=devtools)
-
-
-### Session information
+Here is the session information 
 
 ```{r session_info}
 devtools::session_info()
 ```
 
+It is also useful to compile the time the document was processed. This document was processed on: `r Sys.Date()`.
 
 
 

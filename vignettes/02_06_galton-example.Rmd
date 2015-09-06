@@ -1,47 +1,51 @@
 ---
+title: Galton example
+author: Jeff Leek
 output:
-  BiocStyle::html_document
+  rmarkdown::html_document:
+    toc: true
+  vignette: >  
+    %\VignetteIndexEntry{Galton example}
+    %\VignetteEngine{knitr::rmarkdown}
+    \usepackage[utf8]{inputenc}
 ---
 
-
-<!-- These options are set up specifically for Bioconductor flavored Markdown --> 
-
-
-<!-- rmarkdown v1 -->
-
-<!--
-%\VignetteIndexEntry{R Markdown Lecture}
-%\VignettePackage{BiocStyle}
-%\VignetteEngine{knitr::knitr}
--->
-
-```{r style, results = 'asis',include=FALSE}
-BiocStyle::markdown()
+```{r front, child="./../front.Rmd", echo=FALSE}
 ```
 
-```{r global_options,include=FALSE}
-## see ch. 10 Hooks of Xie's knitr book
-knit_hooks$set(setPch = function(before, options, envir) {
-  if(before) par(pch = 19)
+
+## Dependencies
+
+This document depends on the following packages:
+
+```{r load_hidden, echo=FALSE, results="hide", warning=FALSE}
+suppressPackageStartupMessages({
+  library(devtools)
+  library(Biobase)
+  library(UsingR)
 })
-opts_chunk$set(setPch = TRUE)
-library(RSkittleBrewer)
-# Make the colors pretty
-trop = RSkittleBrewer("tropical")
-palette(trop)
+```
+
+```{r load}
+  library(devtools)
+  library(Biobase)
+  library(UsingR)
 ```
 
 
-# Galton example
+To install these packages you can use the code (or if you are compiling the document, remove the `eval=FALSE` from the chunk.)
 
-Package: [genstats](https://github.com/jtleek/genstats)<br />
-Author: [Jeff Leek](www.jtleek.com) <br />
-Compilation date: `r Sys.Date()`
+```{r install_packages, eval=FALSE}
+install.packages(c("devtools","UsingR"))
+source("http://www.bioconductor.org/biocLite.R")
+biocLite(c("Biobase"))
+```
+
 
 ### Load Galton Data
 
 ```{r galton,fig.height=4,fig.width=8}
-library(UsingR); data(galton)
+data(galton)
 par(mfrow=c(1,2))
 hist(galton$child,col="blue",breaks=100)
 hist(galton$parent,col="blue",breaks=100)
@@ -116,24 +120,16 @@ abline(c(0,0),col="red",lwd=3)
 ```
 
 
-### Dependencies
 
-These are the packages that this tutorial depends on:
+## Session information
 
-* [BiocStyle](http://www.bioconductor.org/packages/release/bioc/html/BiocStyle.html)
-* [knitr](https://cran.r-project.org/package=knitr)
-* [RSkittleBrewer](https://github.com/alyssafrazee/RSkittleBrewer)
-* [Biobase](http://bioconductor.org/packages/release/bioc/html/Biobase.html)
-* [devtools](https://cran.r-project.org/package=devtools)
-* [dplyr](https://cran.r-project.org/package=dplyr)
-* [org.Hs.eg.db](http://bioconductor.org/packages/release/data/annotation/html/org.Hs.eg.db.html)
-* [AnnotationDbi](http://bioconductor.org/packages/release/bioc/html/AnnotationDbi.html)
-
-
-### Session information
+Here is the session information 
 
 ```{r session_info}
 devtools::session_info()
 ```
+
+It is also useful to compile the time the document was processed. This document was processed on: `r Sys.Date()`.
+
 
 

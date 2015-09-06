@@ -1,51 +1,53 @@
 ---
+title: Data transforms
+author: Jeff Leek
 output:
-  BiocStyle::html_document
+  rmarkdown::html_document:
+    toc: true
+  vignette: >  
+    %\VignetteIndexEntry{Data transforms}
+    %\VignetteEngine{knitr::rmarkdown}
+    \usepackage[utf8]{inputenc}
 ---
 
-
-<!-- These options are set up specifically for Bioconductor flavored Markdown --> 
-
-
-<!-- rmarkdown v1 -->
-
-<!--
-%\VignetteIndexEntry{R Markdown Lecture}
-%\VignettePackage{BiocStyle}
-%\VignetteEngine{knitr::knitr}
--->
-
-```{r style, results = 'asis',include=FALSE}
-BiocStyle::markdown()
+```{r front, child="./../front.Rmd", echo=FALSE}
 ```
 
-```{r global_options,include=FALSE}
-## see ch. 10 Hooks of Xie's knitr book
-knit_hooks$set(setPch = function(before, options, envir) {
-  if(before) par(pch = 19)
+
+## Dependencies
+
+This document depends on the following packages:
+
+```{r load_hidden, echo=FALSE, results="hide", warning=FALSE}
+suppressPackageStartupMessages({
+  library(devtools)
+  library(Biobase)
 })
-opts_chunk$set(setPch = TRUE)
-library(RSkittleBrewer)
-# Make the colors pretty
-trop = RSkittleBrewer("tropical")
-palette(trop)
+```
+
+```{r load}
+  library(devtools)
+  library(Biobase)
 ```
 
 
-# Data transforms
+To install these packages you can use the code (or if you are compiling the document, remove the `eval=FALSE` from the chunk.)
 
-Package: [genstats](https://github.com/jtleek/genstats)<br />
-Author: [Jeff Leek](www.jtleek.com) <br />
-Compilation date: `r Sys.Date()`
+```{r install_packages, eval=FALSE}
+install.packages(c("devtools"))
+source("http://www.bioconductor.org/biocLite.R")
+biocLite(c("Biobase"))
+```
 
-### General principles
+
+## General principles
 
 * Make sure data is on the right scale for
   * Visualization
   * Statistical modeling
 
 
-### Load some data
+## Load some data
 
 We will use this expression set to look at how we use plots and tables to check for different characteristics
 
@@ -60,7 +62,7 @@ fdata = fData(bm)
 ls()
 ```
 
-### Skewed distributions
+## Skewed distributions
 
 We would like continuous data to be nice and summetric like a normal distribution for two reasons:(1) plots are easier to see this way and (2) most statistical methods are designed to work better for non-skewed data. 
 
@@ -109,7 +111,7 @@ hist(log2(edata[,1] + 1),breaks=100,col=2,xlim=c(1,15),ylim=c(0,400))
 This is starting to look a little better but we still have the zeros problem. 
 
 
-### Removing features without much data
+## Removing features without much data
 
 In many types of sequencing data we observe that there is not much data for many features. 
 
@@ -139,7 +141,7 @@ hist(log2(filt_edata[,1] + 1),col=2)
 ```
 
 
-### More transforms
+## More transforms
 
 There are a large number of other transforms depending on the type of data you are using. Some common ones are:
 
@@ -147,20 +149,13 @@ There are a large number of other transforms depending on the type of data you a
 * [Box-Cox transforms](https://en.wikipedia.org/wiki/Power_transform) which seek to make the data approximately Normally distributed
 * [rlog transform](http://rpackages.ianhowson.com/bioc/DESeq2/man/rlog.html) - unique to genomics count data, this is a regularized version of the log transform that seeks to minimize differences at low count levels. 
 
-### Dependencies
 
-These are the packages that this tutorial depends on:
+## Session information
 
-* [BiocStyle](http://www.bioconductor.org/packages/release/bioc/html/BiocStyle.html)
-* [knitr](https://cran.r-project.org/package=knitr)
-* [RSkittleBrewer](https://github.com/alyssafrazee/RSkittleBrewer)
-* [Biobase](http://bioconductor.org/packages/release/bioc/html/Biobase.html)
-* [devtools](https://cran.r-project.org/package=devtools)
-* [dplyr](https://cran.r-project.org/package=dplyr)
-
-
-### Session information
+Here is the session information 
 
 ```{r session_info}
 devtools::session_info()
 ```
+
+It is also useful to compile the time the document was processed. This document was processed on: `r Sys.Date()`.

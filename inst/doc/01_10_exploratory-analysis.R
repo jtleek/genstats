@@ -1,19 +1,46 @@
-## ----style, results = 'asis',include=FALSE-------------------------------
-BiocStyle::markdown()
+## ----global_palette, results = 'asis'------------------------------------
+rm(list=ls())
+tropical=  c('darkorange', 'dodgerblue', 'hotpink', 'limegreen', 'yellow')
+palette(tropical)
 
-## ----global_options,include=FALSE----------------------------------------
+## ----global_options,warning=FALSE,message=FALSE--------------------------
 ## see ch. 10 Hooks of Xie's knitr book
+library(knitr)
 knit_hooks$set(setPch = function(before, options, envir) {
   if(before) par(pch = 19)
 })
 opts_chunk$set(setPch = TRUE)
-library(RSkittleBrewer)
-# Make the colors pretty
-trop = RSkittleBrewer("tropical")
-palette(trop)
 
-## ---- eval=FALSE---------------------------------------------------------
-#  devtools::install_github("alyssafrazee/RSkittleBrewer")
+## ----global_plot,warning=FALSE, message=FALSE----------------------------
+knitr::opts_chunk$set(fig.width=5, fig.height=5, size="footnotesize",
+                      warning=FALSE, message=FALSE)
+knitr::knit_hooks$set(small.mar = function(before, options, envir) {
+  if (before) graphics::par(mar = c(5,5,1.5,1))
+})
+
+## ----load_hidden, echo=FALSE, results="hide", warning=FALSE--------------
+suppressPackageStartupMessages({
+  library(devtools)
+  library(Biobase)
+  library(RSkittleBrewer)
+  library(gplots)
+  library(dplyr)
+  library(AnnotationDbi)
+})
+
+## ----load----------------------------------------------------------------
+  library(gplots)
+  library(devtools)
+  library(Biobase)
+  library(RSkittleBrewer)
+  library(org.Hs.eg.db)
+  library(AnnotationDbi)
+
+## ----install_packages, eval=FALSE----------------------------------------
+#  install.packages(c("devtools","gplots"))
+#  source("http://www.bioconductor.org/biocLite.R")
+#  biocLite(c("Biobase","org.Hs.eg.db","AnnotationDbi"))
+#  biocLite("alyssafrazee/RSkittleBrewer")
 
 ## ----pretty, eval=FALSE--------------------------------------------------
 #  library(RSkittleBrewer)
@@ -22,7 +49,7 @@ palette(trop)
 #  palette(trop)
 #  par(pch=19)
 
-## ------------------------------------------------------------------------
+## ----load_data-----------------------------------------------------------
 con = url("http://bowtie-bio.sourceforge.net/recount/ExpressionSets/bodymap_eset.RData")
 load(file=con)
 close(con)
@@ -32,14 +59,14 @@ edata=exprs(bm)
 fdata = fData(bm)
 ls()
 
-## ------------------------------------------------------------------------
+## ----tables--------------------------------------------------------------
 table(pdata$gender)
 table(pdata$gender,pdata$race)
 
-## ------------------------------------------------------------------------
+## ----summary-------------------------------------------------------------
 summary(edata)
 
-## ------------------------------------------------------------------------
+## ----missing-------------------------------------------------------------
 # Use option useNA to include NA's in table
 table(pdata$age,useNA="ifany")
 
@@ -61,20 +88,20 @@ sample_na = rowSums(is.na(edata))
 table(sample_na)
 
 
-## ------------------------------------------------------------------------
+## ----dimensions----------------------------------------------------------
 dim(fdata)
 dim(pdata)
 dim(edata)
 
-## ------------------------------------------------------------------------
+## ----boxplot-------------------------------------------------------------
 boxplot(log2(edata+1),col=2,range=0)
 
-## ------------------------------------------------------------------------
+## ----histograms----------------------------------------------------------
 par(mfrow=c(1,2))
 hist(log2(edata[,1]+1),col=2)
 hist(log2(edata[,2]+1),col=2)
 
-## ------------------------------------------------------------------------
+## ----densities-----------------------------------------------------------
 plot(density(log2(edata[,1]+1)),col=2)
 lines(density(log2(edata[,2]+1)),col=3)
 
@@ -87,17 +114,11 @@ aa = log2(edata[,1]+1) + log2(edata[,2]+1)
 plot(aa,mm,col=2)
 
 ## ------------------------------------------------------------------------
-library(dplyr)
 edata = as.data.frame(edata)
 filt_edata = filter(edata,rowMeans(edata) > 1)
-boxplot(log2(filt_edata+1),col=2)
-
-## ----eval=FALSE----------------------------------------------------------
-#  source("http://bioconductor.org/biocLite.R")
-#  biocLite("org.Hs.eg.db")
+boxplot(as.matrix(log2(filt_edata+1)),col=2)
 
 ## ------------------------------------------------------------------------
-library(org.Hs.eg.db)
 aeid = as.character(fdata[,1])
 chr = AnnotationDbi::select(org.Hs.eg.db,keys=aeid,keytype="ENSEMBL",columns="CHR")
 head(chr)
@@ -126,14 +147,13 @@ ematrix = as.matrix(edata)[rowMeans(edata) > 10000,]
 heatmap(ematrix)
 
 ## ------------------------------------------------------------------------
-colramp = colorRampPalette(c(trop[3],"white",trop[2]))(9)
+colramp = colorRampPalette(c(3,"white",2))(9)
 heatmap(ematrix,col=colramp)
 
 ## ------------------------------------------------------------------------
 heatmap(ematrix,col=colramp,Rowv=NA,Colv=NA)
 
 ## ------------------------------------------------------------------------
-library(gplots)
 heatmap.2(ematrix,col=colramp,Rowv=NA,Colv=NA,
           dendrogram="none", scale="row",trace="none")
 

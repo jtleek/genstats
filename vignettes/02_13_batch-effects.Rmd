@@ -1,62 +1,68 @@
 ---
+title: Batch effects and confounders
+author: Jeff Leek
 output:
-  BiocStyle::html_document
+  rmarkdown::html_document:
+    toc: true
+  vignette: >  
+    %\VignetteIndexEntry{Batch effects and confounders}
+    %\VignetteEngine{knitr::rmarkdown}
+    \usepackage[utf8]{inputenc}
 ---
 
-
-<!-- These options are set up specifically for Bioconductor flavored Markdown --> 
-
-
-<!-- rmarkdown v1 -->
-
-<!--
-%\VignetteIndexEntry{R Markdown Lecture}
-%\VignettePackage{BiocStyle}
-%\VignetteEngine{knitr::knitr}
--->
-
-```{r style, results = 'asis',include=FALSE}
-BiocStyle::markdown()
+```{r front, child="./../front.Rmd", echo=FALSE}
 ```
 
-```{r global_options,include=FALSE}
-## see ch. 10 Hooks of Xie's knitr book
-knit_hooks$set(setPch = function(before, options, envir) {
-  if(before) par(pch = 19)
+
+## Dependencies
+
+This document depends on the following packages:
+
+```{r load_hidden, echo=FALSE, results="hide", warning=FALSE}
+suppressPackageStartupMessages({
+  library(devtools)
+  library(Biobase)
+  library(sva)
+  library(bladderbatch)
+  library(snpStats)
 })
-opts_chunk$set(setPch = TRUE)
-library(RSkittleBrewer)
-# Make the colors pretty
-trop = RSkittleBrewer("tropical")
-palette(trop)
+```
+
+```{r load}
+  library(devtools)
+  library(Biobase)
+  library(sva)
+  library(bladderbatch)
+  library(snpStats)
 ```
 
 
-# Batch effects
+To install these packages you can use the code (or if you are compiling the document, remove the `eval=FALSE` from the chunk.)
 
-Package: [genstats](https://github.com/jtleek/genstats)<br />
-Author: [Jeff Leek](www.jtleek.com) <br />
-Compilation date: `r Sys.Date()`
+```{r install_packages, eval=FALSE}
+install.packages(c("devtools"))
+source("http://www.bioconductor.org/biocLite.R")
+biocLite(c("Biobase","sva","bladderbatch","snpStats"))
+```
 
-### Download the data
+
+## Download the data
 
 
 The analyses performed in this experiment are based on gene expression measurements from a bladder cancer study: [Gene expression in the urinary bladder: a common carcinoma in situ gene expression signature exists disregarding histopathological classification.](http://cancerres.aacrjournals.org/content/64/11/4040.full.pdf) The data can be loaded from the [bladderbatch](http://bioconductor.org/packages/release/data/experiment/html/bladderbatch.html) data package. 
 
 ```{r}
-library(sva)
-library(bladderbatch)
 data(bladderdata)
 ```
 
-### Set up the data
+## Set up the data
 
 ```{r}
 pheno = pData(bladderEset)
 edata = exprs(bladderEset)
 ```
 
-### Adjusting for batch effects with a linear model
+## Adjusting for batch effects with a linear model
 
 We will use two models. One with the variable we care about (cancer status) and the other that is just the known adjustment variables (in this case we will assume none) 
 
@@ -73,7 +79,7 @@ table(pheno$cancer,pheno$batch)
 ```
 
 
-### Adjusting for batch effects with Combat
+## Adjusting for batch effects with Combat
 
 Another approach is to use Combat. Combat returns a "cleaned" data matrix after batch effects have been removed. Here we pass a model matrix with any known adjustment variables and a second parameter that is the batch variable.  
 
@@ -86,7 +92,7 @@ combat_fit = lm.fit(modcancer,t(combat_edata))
 hist(combat_fit$coefficients[2,],col=2,breaks=100)
 ```
 
-### Comparing Combat and linear adjustment 
+## Comparing Combat and linear adjustment 
 
 We can compare the estimated coefficients from Combat and linear adjustment by looking at the right coefficients for each model. 
 
@@ -98,7 +104,7 @@ abline(c(0,1),col=1,lwd=3)
 
 
 
-### Adjusting for batch effects with sva
+## Adjusting for batch effects with sva
 
 
 First we need to estimate the surrogate variables. To do this, we need to build a model with any known adjustment variables and the variable we care about `mod` and another model with only the adjustment variables. Here we won't adjust for anything to see if `sva` can "discover" the batch effect. 
@@ -137,33 +143,55 @@ abline(c(0,1),col=1,lwd=3)
 ```
 
 
-### Note and furthe resources
+## Principal components for populatin structure
+
+Load an example data set and take a smaller subset of samples for computational efficiency
+
+```{r}
+data(for.exercise)
+controls <- rownames(subject.support)[subject.support$cc==0]
+use <- seq(1, ncol(snps.10), 10)
+ctl.10 <- snps.10[controls,use]
+```
+
+
+Calculate the PCs
+
+```{r}
+xxmat <- xxt(ctl.10, correct.for.missing=FALSE)
+evv <- eigen(xxmat, symmetric=TRUE)
+pcs <- evv$vectors[,1:5]
+```
+
+Let's compare the PCs to the population labels and see that PC1 captures the population variable very well
+
+```{r}
+pop <- subject.support[controls,"stratum"]
+plot(pcs[,1],pcs[,2],col=as.numeric(pop),
+      xlab="PC1",ylab="PC2")
+legend(0,0.15,legend=levels(pop),pch=19,col=1:2)
+```
+
+
+## Notes and further resources
 
 You can read more about batch effect corrections in the [sva package vignette](https://www.bioconductor.org/packages/release/bioc/html/sva.html).There are actually a large number of variants on the sva batch correction idea. Some good ones are:
 
 * [PEER](https://www.sanger.ac.uk/resources/software/peer/)
 * [RUV](http://www.bioconductor.org/packages/release/bioc/html/RUVnormalize.html)
 
+There are also some alternatives for PCA analysis in R in addition to the usual `svd` and `pr.comp` functions. 
 
+* [SNPRelate][http://www.bioconductor.org/packages/release/bioc/html/SNPRelate.html]
 
-### Dependencies
+## Session information
 
-These are the packages that this tutorial depends on:
-
-* [BiocStyle](http://www.bioconductor.org/packages/release/bioc/html/BiocStyle.html)
-* [knitr](https://cran.r-project.org/package=knitr)
-* [RSkittleBrewer](https://github.com/alyssafrazee/RSkittleBrewer)
-* [Biobase](http://bioconductor.org/packages/release/bioc/html/Biobase.html)
-* [devtools](https://cran.r-project.org/package=devtools)
-* [dplyr](https://cran.r-project.org/package=dplyr)
-* [org.Hs.eg.db](http://bioconductor.org/packages/release/data/annotation/html/org.Hs.eg.db.html)
-* [AnnotationDbi](http://bioconductor.org/packages/release/bioc/html/AnnotationDbi.html)
-
-
-### Session information
+Here is the session information 
 
 ```{r session_info}
 devtools::session_info()
 ```
+
+It is also useful to compile the time the document was processed. This document was processed on: `r Sys.Date()`.
 
 

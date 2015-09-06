@@ -22,73 +22,64 @@ knitr::knit_hooks$set(small.mar = function(before, options, envir) {
 suppressPackageStartupMessages({
   library(devtools)
   library(Biobase)
+  library(limma)
+  library(edge)
+  library(genefilter)
 })
 
 ## ----load----------------------------------------------------------------
   library(devtools)
   library(Biobase)
+  library(limma)
+  library(edge)
+  library(genefilter)
 
 ## ----install_packages, eval=FALSE----------------------------------------
 #  install.packages(c("devtools"))
 #  source("http://www.bioconductor.org/biocLite.R")
-#  biocLite(c("Biobase"))
+#  biocLite(c("Biobase","limma","genefilter","jdstorey/edge"))
 
 ## ------------------------------------------------------------------------
-con =url("http://bowtie-bio.sourceforge.net/recount/ExpressionSets/montpick_eset.RData")
+con =url("http://bowtie-bio.sourceforge.net/recount/ExpressionSets/bottomly_eset.RData")
 load(file=con)
 close(con)
-mp = montpick.eset
-pdata=pData(mp)
-edata=as.data.frame(exprs(mp))
-fdata = fData(mp)
+bot = bottomly.eset
+pdata=pData(bot)
+edata=as.matrix(exprs(bot))
+fdata = fData(bot)
 ls()
 
 ## ------------------------------------------------------------------------
-edata = edata[rowMeans(edata) > 100, ]
-edata = log2(edata + 1)
-edata_centered = edata - rowMeans(edata)
-svd1 = svd(edata_centered)
-names(svd1)
+edata = log2(as.matrix(edata) + 1)
+edata = edata[rowMeans(edata) > 10, ]
 
 ## ------------------------------------------------------------------------
-plot(svd1$d,ylab="Singular value",col=2)
-plot(svd1$d^2/sum(svd1$d^2),ylab="Percent Variance Explained",col=2)
+tstats_obj = rowttests(edata,pdata$strain)
+hist(tstats_obj$statistic,col=2,xlim=c(-5,2))
 
 ## ------------------------------------------------------------------------
-par(mfrow=c(1,2))
-plot(svd1$v[,1],col=2,ylab="1st PC")
-plot(svd1$v[,2],col=2,ylab="2nd PC")
+set.seed(135)
+strain = pdata$strain
+strain0 = sample(strain)
+tstats_obj0 = rowttests(edata,strain0)
+hist(tstats_obj0$statistic,col=2,xlim=c(-5,2))
 
 ## ------------------------------------------------------------------------
-plot(svd1$v[,1],svd1$v[,2],col=2,ylab="2nd PC",xlab="1st PC")
+quantile(tstats_obj0$statistic)
+quantile(tstats_obj$statistic)
 
 ## ------------------------------------------------------------------------
-plot(svd1$v[,1],svd1$v[,2],ylab="2nd PC",
-     xlab="1st PC",col=as.numeric(pdata$study))
+set.seed(3333)
+B = 1000
+tstat0 = matrix(NA,nrow=dim(edata)[1],ncol=B)
+tstat = tstats_obj$statistic
+for(i in 1:B){
+  strain0 = sample(strain)
+  tstat0[,i] = rowttests(edata,strain0)$statistic
+}
 
-## ------------------------------------------------------------------------
-boxplot(svd1$v[,1] ~ pdata$study,border=c(1,2))
-points(svd1$v[,1] ~ jitter(as.numeric(pdata$study)),col=as.numeric(pdata$study))
-
-## ------------------------------------------------------------------------
-pc1 = prcomp(edata)
-plot(pc1$rotation[,1],svd1$v[,1])
-
-## ------------------------------------------------------------------------
-edata_centered2 = t(t(edata) - colMeans(edata))
-svd2 = svd(edata_centered2)
-plot(pc1$rotation[,1],svd2$v[,1],col=2)
-
-## ------------------------------------------------------------------------
-edata_outlier = edata_centered
-edata_outlier[1,] = edata_centered[1,] * 10000
-svd3 = svd(edata_outlier)
-par(mfrow=c(1,2))
-plot(svd1$v[,1],col=1,main="Without outlier")
-plot(svd3$v[,1],col=2,main="With outlier")
-
-## ------------------------------------------------------------------------
-plot(svd3$v[,1],edata_outlier[1,],col=4)
+pvals = empPvals(tstat,tstat0)
+hist(pvals,col=2)
 
 ## ----session_info--------------------------------------------------------
 devtools::session_info()

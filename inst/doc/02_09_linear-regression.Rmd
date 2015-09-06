@@ -1,44 +1,46 @@
 ---
+title: Linear regression in R
+author: Jeff Leek
 output:
-  BiocStyle::html_document
+  rmarkdown::html_document:
+    toc: true
+  vignette: >  
+    %\VignetteIndexEntry{Linear regression example}
+    %\VignetteEngine{knitr::rmarkdown}
+    \usepackage[utf8]{inputenc}
 ---
 
-
-<!-- These options are set up specifically for Bioconductor flavored Markdown --> 
-
-
-<!-- rmarkdown v1 -->
-
-<!--
-%\VignetteIndexEntry{R Markdown Lecture}
-%\VignettePackage{BiocStyle}
-%\VignetteEngine{knitr::knitr}
--->
-
-```{r style, results = 'asis',include=FALSE}
-BiocStyle::markdown()
+```{r front, child="./../front.Rmd", echo=FALSE}
 ```
 
-```{r global_options,include=FALSE}
-## see ch. 10 Hooks of Xie's knitr book
-knit_hooks$set(setPch = function(before, options, envir) {
-  if(before) par(pch = 19)
+
+## Dependencies
+
+This document depends on the following packages:
+
+```{r load_hidden, echo=FALSE, results="hide", warning=FALSE}
+suppressPackageStartupMessages({
+  library(devtools)
+  library(Biobase)
+  library(broom)
 })
-opts_chunk$set(setPch = TRUE)
-library(RSkittleBrewer)
-# Make the colors pretty
-trop = RSkittleBrewer("tropical")
-palette(trop)
 ```
 
+```{r load}
+  library(devtools)
+  library(Biobase)
+  library(broom)
+```
 
-# Linear regression example
+To install these packages you can use the code (or if you are compiling the document, remove the `eval=FALSE` from the chunk.)
 
-Package: [genstats](https://github.com/jtleek/genstats)<br />
-Author: [Jeff Leek](www.jtleek.com) <br />
-Compilation date: `r Sys.Date()`
+```{r install_packages, eval=FALSE}
+install.packages(c("devtools","broom"))
+source("http://www.bioconductor.org/biocLite.R")
+biocLite(c("Biobase"))
+```
 
-### Download the data
+## Download the data
 
 
 Here we are going to use some data from the paper [Detection of redundant fusion transcripts as biomarkers or disease-specific therapeutic targets in breast cancer.](http://www.ncbi.nlm.nih.gov/pubmed/22496456) that uses data from different normal human tissues (called the Illumina BodyMap data).
@@ -54,18 +56,17 @@ fdata = fData(bm)
 ls()
 ```
 
-### Fit a simple linear regression
+## Fit a simple linear regression
 
 Here we regress the counts for the first gene on the age of the people from whom the tissue was drawn. 
 
 ```{r}
-library(broom)
 edata = as.matrix(edata)
 lm1 = lm(edata[1,] ~ pdata$age)
 tidy(lm1)
 ```
 
-### Is fitting the line a good idea?
+## Is fitting the line a good idea?
 
 Visual diagnostics are often some of the most helpful 
 
@@ -74,23 +75,23 @@ plot(pdata$age,edata[1,], col=1)
 abline(lm1$coeff[1],lm1$coeff[2], col=2,lwd=3)
 ```
 
-### What about categorical variables?
+## What about categorical variables?
 
 ```{r}
 pdata$gender
 table(pdata$gender)
 ```
 
-### Visualize the difference between genders
+## Visualize the difference between genders
 
 ```{r}
 boxplot(edata[1,] ~ pdata$gender)
 points(edata[1,] ~ jitter(as.numeric(pdata$gender)),
-       col=as.numeric(pheno_data$gender))
+       col=as.numeric(pdata$gender))
 ```
 
 
-### "dummy" variables
+## "dummy" variables
 
 ```{r}
 dummy_m = pdata$gender=="M"
@@ -100,45 +101,56 @@ dummy_f = pdata$gender=="F"
 dummy_f
 ```
 
-### R's modeling formulae do this for you automatically
+## R's modeling formulae do this for you automatically
 
 ```{r}
 lm2 = lm(edata[1,] ~ pdata$gender)
 tidy(lm2)
-
 ```
 
-### Peaking "under the hood" of the variables used in the model
+## Peaking "under the hood" of the variables used in the model
 
 ```{r}
 mod2 = model.matrix(~pdata$gender)
 mod2
 ```
 
-### Categorical variables with multiple levels
+## Categorical variables with multiple levels
 
 ```{r}
-table(pheno_data$tissue.type)
+table(pdata$tissue.type)
 pdata$tissue.type == "adipose"
 pdata$tissue.type == "adrenal"
 ```
 
-### This leads to multiple coefficients for one variable
+## This leads to multiple coefficients for one variable
 
 ```{r}
 tidy(lm(edata[1,] ~ pdata$tissue.type ))
 ```
 
-### Adjusting for variables
+## Adjusting for variables
 
 ```{r}
-table(pheno_data$num.tech.reps)
 lm3 = lm(edata[1,] ~ pdata$age + pdata$gender)
 tidy(lm3)
 ```
 
+## Interactions (careful!)
 
-### A few things to be aware of
+You can add interaction terms, but there are a couple of things to keep in mind:
+
+* Interpretation can be challenging
+* You should always also include main effects
+* Interactions in genomics data are in general hard to detect, and can be fraught for example in gene by environment interactions, the interaction term only tells you that there may be an association, but there are lots of reasons for this statistical association that aren't biological interaction. 
+
+```{r}
+lm4 = lm(edata[1,] ~ pdata$age*pdata$gender)
+tidy(lm4)
+```
+
+
+## A few things to be aware of
 
 Outliers can have a big impact on the regression, depending on where they land. Here there isn't much impact
 
@@ -191,39 +203,28 @@ tidy(lm8)
 Another good idea is to look for "patterns" in the residuals
 
 ```{r}
-library(RSkittleBrewer)
-trop = RSkittleBrewer("tropical")
-colramp = colorRampPalette(c(trop[1:4]))(17)
+colramp = colorRampPalette(1:4)(17)
 lm9 = lm(edata[2,] ~ pdata$age)
 plot(lm9$residuals,col=colramp[as.numeric(pdata$tissue.type)])
 ```
 
 
-### Notes and further reading
+## Notes and further reading
 
 This is of course a ridiculously brief introduction to linear models. The main thing to keep in mind is that you should visually inspect the model fits, consider the scale you are measuring on, and evaluate whether the covariates are related in ways that are normal to you. Here are some places to learn a lot more about linear models
 
 * [Regression Models (Coursera)](https://www.coursera.org/course/regmods)
 * [Introduction to linear models and matrix algebra (EdX)](http://online-learning.harvard.edu/course/introduction-linear-models-and-matrix-algebra)
 
-### Dependencies
+## Session information
 
-These are the packages that this tutorial depends on:
-
-* [BiocStyle](http://www.bioconductor.org/packages/release/bioc/html/BiocStyle.html)
-* [knitr](https://cran.r-project.org/package=knitr)
-* [RSkittleBrewer](https://github.com/alyssafrazee/RSkittleBrewer)
-* [Biobase](http://bioconductor.org/packages/release/bioc/html/Biobase.html)
-* [devtools](https://cran.r-project.org/package=devtools)
-* [dplyr](https://cran.r-project.org/package=dplyr)
-* [org.Hs.eg.db](http://bioconductor.org/packages/release/data/annotation/html/org.Hs.eg.db.html)
-* [AnnotationDbi](http://bioconductor.org/packages/release/bioc/html/AnnotationDbi.html)
-
-
-### Session information
+Here is the session information 
 
 ```{r session_info}
 devtools::session_info()
 ```
+
+It is also useful to compile the time the document was processed. This document was processed on: `r Sys.Date()`.
+
 
 

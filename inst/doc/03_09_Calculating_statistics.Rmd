@@ -1,0 +1,202 @@
+---
+title: Calculating statistics
+author: Jeff Leek
+output:
+  rmarkdown::html_document:
+    toc: true
+  vignette: >  
+    %\VignetteIndexEntry{Calculating statistics}
+    %\VignetteEngine{knitr::rmarkdown}
+    \usepackage[utf8]{inputenc}
+---
+
+```{r front, child="./../front.Rmd", echo=FALSE}
+```
+
+
+## Dependencies
+
+This document depends on the following packages:
+
+```{r load_hidden, echo=FALSE, results="hide", warning=FALSE}
+suppressPackageStartupMessages({
+  library(devtools)
+  library(Biobase)
+  library(limma)
+  library(edge)
+  library(genefilter)
+})
+```
+
+```{r load}
+  library(devtools)
+  library(Biobase)
+  library(limma)
+  library(edge)
+  library(genefilter)
+```
+
+
+To install these packages you can use the code (or if you are compiling the document, remove the `eval=FALSE` from the chunk.)
+
+```{r install_packages, eval=FALSE}
+install.packages(c("devtools"))
+source("http://www.bioconductor.org/biocLite.R")
+biocLite(c("Biobase","limma","genefilter","jdstorey/edge"))
+```
+
+
+## Download the data
+
+
+Here we are going to use some data from the paper [Evaluating gene expression in C57BL/6J and DBA/2J mouse striatum using RNA-Seq and microarrays.](http://www.ncbi.nlm.nih.gov/pubmed?term=21455293) that is a comparative RNA-seq analysis of different mouse strains.
+
+```{r}
+con =url("http://bowtie-bio.sourceforge.net/recount/ExpressionSets/bottomly_eset.RData")
+load(file=con)
+close(con)
+bot = bottomly.eset
+pdata=pData(bot)
+edata=as.matrix(exprs(bot))
+fdata = fData(bot)
+ls()
+```
+
+## Transform the data
+
+Here we will transform the data and remove lowly expressed genes. 
+
+```{r}
+edata = log2(as.matrix(edata) + 1)
+edata = edata[rowMeans(edata) > 10, ]
+```
+
+## Calculate t- or F-statistics rapidly
+
+The `genefilter` package lets you compute statistics rapidly for very simple cases (two or multi-group) comparisons. These are not moderated in any way. 
+
+```{r}
+tstats_obj = rowttests(edata,pdata$strain)
+names(tstats_obj)
+hist(tstats_obj$statistic,col=2)
+```
+
+For multi-group comparisons use the F-statistic
+
+```{r}
+fstats_obj = rowFtests(edata,as.factor(pdata$lane.number))
+names(fstats_obj)
+hist(fstats_obj$statistic,col=2)
+```
+
+## Fit many statistics with limma
+
+This approach fits many moderated statistics simultaneously 
+
+```{r}
+mod = model.matrix(~ pdata$strain)
+fit_limma = lmFit(edata,mod)
+ebayes_limma = eBayes(fit_limma)
+head(ebayes_limma$t)
+```
+
+If the model is unadjusted you get the moderated version of the statistic from `rowttests`
+
+```{r}
+plot(ebayes_limma$t[,2],-tstats_obj$statistic,col=4,
+     xlab="Moderated T-stat",ylab="T-stat")
+abline(c(0,1),col="darkgrey",lwd=3)
+```
+
+
+## Fit many adjusted statistics with limma
+
+Here we adjust for the lane number, now the test-statistic for the strain is adjusted for the lane number (a surrogate for a batch effect).
+
+```{r}
+mod_adj = model.matrix(~ pdata$strain + as.factor(pdata$lane.number))
+fit_limma_adj = lmFit(edata,mod_adj)
+ebayes_limma_adj = eBayes(fit_limma_adj)
+head(ebayes_limma_adj$t)
+```
+
+If the model is adjusted you get the moderated version of the statistic but it doesn't match `rowttests` because it is adjusted
+
+```{r}
+plot(ebayes_limma_adj$t[,2],-tstats_obj$statistic,col=3,
+     xlab="Moderated T-stat",ylab="T-stat")
+abline(c(0,1),lwd=3,col="darkgrey")
+```
+
+## Calculating a nested model comparison with limma
+
+Sometimes we want to compare the null model to the alternative model with some additional covariates. Here we have to know which coefficients we want to test in the alternative model. 
+
+Suppose we wanted to find lane effects then we can fit a limma model and find which coefficients belong to the lane variable.
+
+```{r}
+mod_lane = model.matrix(~ as.factor(pdata$lane.number))
+fit_limma_lane = lmFit(edata,mod_lane)
+ebayes_limma_lane = eBayes(fit_limma_lane) 
+head(ebayes_limma_lane$t)
+```
+
+Then we can get the F-statistics with `topTable`
+
+```{r}
+top_lane = topTable(ebayes_limma_lane, coef=2:7,
+                    number=dim(edata)[1],sort.by="none")
+head(top_lane)
+```
+
+This is again the moderated version of the F-statistic we saw earlier
+
+
+```{r}
+plot(top_lane$F,fstats_obj$statistic,
+     xlab="Moderated F-statistic",ylab="F-statistic",col=3)
+```
+
+
+## Calculating a nested comparison with edge
+
+We can also perform the unmoderated nested comparisons in the `edge` package, which also has functions for calculating a more powerful [odp statistic](http://genomine.org/papers/SDL_Biostat_2007.pdf)
+
+```{r}
+edge_study = build_study(edata, grp = as.factor(pdata$lane.number))
+de_obj = lrt(edge_study)
+qval = qvalueObj(de_obj)
+plot(qval$stat,fstats_obj$statistic,col=4,
+      xlab="F-stat from edge",ylab="F-stat from genefilter")
+```
+
+We can easily adjust for variables by passing arguments to the `adj.var` variable.
+
+```{r}
+edge_study2 = build_study(edata, grp = as.factor(pdata$lane.number),
+                        adj.var=pdata$strain)
+de_obj2 = lrt(edge_study2)
+qval2 = qvalueObj(de_obj2)
+plot(qval2$stat,fstats_obj$statistic,col=4,
+      xlab="F-stat from edge",ylab="F-stat from genefilter")
+```
+
+## More information
+
+You can find a lot more information on this model fitting strategy in:
+
+* The [limma paper](http://www.bioconductor.org/packages/release/bioc/vignettes/limma/inst/doc/usersguide.pdf)
+* The [limma vignette](http://www.bioconductor.org/packages/release/bioc/vignettes/limma/inst/doc/usersguide.pdf)
+
+## Session information
+
+Here is the session information 
+
+```{r session_info}
+devtools::session_info()
+```
+
+It is also useful to compile the time the document was processed. This document was processed on: `r Sys.Date()`.
+
+
+

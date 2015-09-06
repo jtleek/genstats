@@ -1,0 +1,137 @@
+---
+title: Permutation
+author: Jeff Leek
+output:
+  rmarkdown::html_document:
+    toc: true
+  vignette: >  
+    %\VignetteIndexEntry{Permutation}
+    %\VignetteEngine{knitr::rmarkdown}
+    \usepackage[utf8]{inputenc}
+---
+
+```{r front, child="./../front.Rmd", echo=FALSE}
+```
+
+
+## Dependencies
+
+This document depends on the following packages:
+
+```{r load_hidden, echo=FALSE, results="hide", warning=FALSE}
+suppressPackageStartupMessages({
+  library(devtools)
+  library(Biobase)
+  library(limma)
+  library(edge)
+  library(genefilter)
+})
+```
+
+```{r load}
+  library(devtools)
+  library(Biobase)
+  library(limma)
+  library(edge)
+  library(genefilter)
+```
+
+
+To install these packages you can use the code (or if you are compiling the document, remove the `eval=FALSE` from the chunk.)
+
+```{r install_packages, eval=FALSE}
+install.packages(c("devtools"))
+source("http://www.bioconductor.org/biocLite.R")
+biocLite(c("Biobase","limma","genefilter","jdstorey/edge"))
+```
+
+
+## Download the data
+
+
+Here we are going to use some data from the paper [Evaluating gene expression in C57BL/6J and DBA/2J mouse striatum using RNA-Seq and microarrays.](http://www.ncbi.nlm.nih.gov/pubmed?term=21455293) that is a comparative RNA-seq analysis of different mouse strains.
+
+```{r}
+con =url("http://bowtie-bio.sourceforge.net/recount/ExpressionSets/bottomly_eset.RData")
+load(file=con)
+close(con)
+bot = bottomly.eset
+pdata=pData(bot)
+edata=as.matrix(exprs(bot))
+fdata = fData(bot)
+ls()
+```
+
+## Transform the data
+
+Here we will transform the data and remove lowly expressed genes. 
+
+```{r}
+edata = log2(as.matrix(edata) + 1)
+edata = edata[rowMeans(edata) > 10, ]
+```
+
+## Calculate t- or F-statistics rapidly
+
+The `genefilter` package lets you compute statistics rapidly for very simple cases (two or multi-group) comparisons. These are not moderated in any way. 
+
+```{r}
+tstats_obj = rowttests(edata,pdata$strain)
+hist(tstats_obj$statistic,col=2,xlim=c(-5,2))
+```
+
+We can now permute the sample labels using the `sample` function in R. 
+
+```{r}
+set.seed(135)
+strain = pdata$strain
+strain0 = sample(strain)
+tstats_obj0 = rowttests(edata,strain0)
+hist(tstats_obj0$statistic,col=2,xlim=c(-5,2))
+```
+
+We can now compare the observed and permuted statistics
+
+```{r}
+quantile(tstats_obj0$statistic)
+quantile(tstats_obj$statistic)
+```
+
+
+## Calculating empirical permutation p-values with edge
+
+Often when you permute you are trying to calculate an empirical p-value. To do this we can compare each observed statistic to the permuted statistics. You can either compare within a single gene (argument `pooled=FALSE` in the `empPvals` function) or pooling the permuted statistics across multiple genes (argument `pooled=TRUE` in the `empPvals` function, the default). 
+
+```{r}
+set.seed(3333)
+B = 1000
+tstat0 = matrix(NA,nrow=dim(edata)[1],ncol=B)
+tstat = tstats_obj$statistic
+for(i in 1:B){
+  strain0 = sample(strain)
+  tstat0[,i] = rowttests(edata,strain0)$statistic
+}
+
+pvals = empPvals(tstat,tstat0)
+hist(pvals,col=2)
+```
+
+## More information
+
+Permutation is widely applied and has many varieties. 
+
+* You can find different permutation approaches for more complicated study designs in teh [permute package](https://cran.r-project.org/web/packages/permute/vignettes/permutations.pdf)
+* An alternative is bootstrapping. This is a whole major area as well. [This book](http://www.amazon.com/Introduction-Bootstrap-Monographs-Statistics-Probability/dp/0412042312) and the [boot package](https://cran.r-project.org/web/packages/boot/) are good places to start/
+
+## Session information
+
+Here is the session information 
+
+```{r session_info}
+devtools::session_info()
+```
+
+It is also useful to compile the time the document was processed. This document was processed on: `r Sys.Date()`.
+
+
+

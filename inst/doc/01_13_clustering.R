@@ -1,16 +1,39 @@
-## ----style, results = 'asis',include=FALSE-------------------------------
-BiocStyle::markdown()
+## ----global_palette, results = 'asis'------------------------------------
+rm(list=ls())
+tropical=  c('darkorange', 'dodgerblue', 'hotpink', 'limegreen', 'yellow')
+palette(tropical)
 
-## ----global_options,include=FALSE----------------------------------------
+## ----global_options,warning=FALSE,message=FALSE--------------------------
 ## see ch. 10 Hooks of Xie's knitr book
+library(knitr)
 knit_hooks$set(setPch = function(before, options, envir) {
   if(before) par(pch = 19)
 })
 opts_chunk$set(setPch = TRUE)
-library(RSkittleBrewer)
-# Make the colors pretty
-trop = RSkittleBrewer("tropical")
-palette(trop)
+
+## ----global_plot,warning=FALSE, message=FALSE----------------------------
+knitr::opts_chunk$set(fig.width=5, fig.height=5, size="footnotesize",
+                      warning=FALSE, message=FALSE)
+knitr::knit_hooks$set(small.mar = function(before, options, envir) {
+  if (before) graphics::par(mar = c(5,5,1.5,1))
+})
+
+## ----load_hidden, echo=FALSE, results="hide", warning=FALSE--------------
+suppressPackageStartupMessages({
+  library(devtools)
+  library(Biobase)
+  library(dendextend)
+})
+
+## ----load----------------------------------------------------------------
+  library(devtools)
+  library(Biobase)
+  library(dendextend)
+
+## ----install_packages, eval=FALSE----------------------------------------
+#  install.packages(c("devtools","dendextend"))
+#  source("http://www.bioconductor.org/biocLite.R")
+#  biocLite(c("Biobase"))
 
 ## ------------------------------------------------------------------------
 con =url("http://bowtie-bio.sourceforge.net/recount/ExpressionSets/bodymap_eset.RData")
@@ -30,9 +53,7 @@ edata = log2(edata + 1)
 dist1 = dist(t(edata))
 
 ## Look at distance matrix
-library(RSkittleBrewer)
-trop = RSkittleBrewer("tropical")
-colramp = colorRampPalette(c(trop[3],"white",trop[2]))(9)
+colramp = colorRampPalette(c(3,"white",2))(9)
 heatmap(as.matrix(dist1),col=colramp,Colv=NA,Rowv=NA)
 
 ## ------------------------------------------------------------------------
@@ -43,13 +64,12 @@ plot(hclust1)
 plot(hclust1,hang=-1)
 
 ## ------------------------------------------------------------------------
-library(dendextend)
 dend = as.dendrogram(hclust1)
-dend = color_labels(hclust1,4,col=trop)
+dend = color_labels(hclust1,4,col=1:4)
 plot(dend)
 
 ## ------------------------------------------------------------------------
-labels_colors(dend) = c(rep(trop[1],10),rep(trop[2],9))
+labels_colors(dend) = c(rep(1,10),rep(2,9))
 plot(dend)
 
 ## ------------------------------------------------------------------------

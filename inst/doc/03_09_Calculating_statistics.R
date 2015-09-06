@@ -22,113 +22,98 @@ knitr::knit_hooks$set(small.mar = function(before, options, envir) {
 suppressPackageStartupMessages({
   library(devtools)
   library(Biobase)
-  library(broom)
+  library(limma)
+  library(edge)
+  library(genefilter)
 })
 
 ## ----load----------------------------------------------------------------
   library(devtools)
   library(Biobase)
-  library(broom)
+  library(limma)
+  library(edge)
+  library(genefilter)
 
 ## ----install_packages, eval=FALSE----------------------------------------
-#  install.packages(c("devtools","broom"))
+#  install.packages(c("devtools"))
 #  source("http://www.bioconductor.org/biocLite.R")
-#  biocLite(c("Biobase"))
+#  biocLite(c("Biobase","limma","genefilter","jdstorey/edge"))
 
 ## ------------------------------------------------------------------------
-con =url("http://bowtie-bio.sourceforge.net/recount/ExpressionSets/bodymap_eset.RData")
+con =url("http://bowtie-bio.sourceforge.net/recount/ExpressionSets/bottomly_eset.RData")
 load(file=con)
 close(con)
-bm = bodymap.eset
-pdata=pData(bm)
-edata=as.data.frame(exprs(bm))
-fdata = fData(bm)
+bot = bottomly.eset
+pdata=pData(bot)
+edata=as.matrix(exprs(bot))
+fdata = fData(bot)
 ls()
 
 ## ------------------------------------------------------------------------
-edata = as.matrix(edata)
-lm1 = lm(edata[1,] ~ pdata$age)
-tidy(lm1)
+edata = log2(as.matrix(edata) + 1)
+edata = edata[rowMeans(edata) > 10, ]
 
 ## ------------------------------------------------------------------------
-plot(pdata$age,edata[1,], col=1)
-abline(lm1$coeff[1],lm1$coeff[2], col=2,lwd=3)
+tstats_obj = rowttests(edata,pdata$strain)
+names(tstats_obj)
+hist(tstats_obj$statistic,col=2)
 
 ## ------------------------------------------------------------------------
-pdata$gender
-table(pdata$gender)
+fstats_obj = rowFtests(edata,as.factor(pdata$lane.number))
+names(fstats_obj)
+hist(fstats_obj$statistic,col=2)
 
 ## ------------------------------------------------------------------------
-boxplot(edata[1,] ~ pdata$gender)
-points(edata[1,] ~ jitter(as.numeric(pdata$gender)),
-       col=as.numeric(pdata$gender))
+mod = model.matrix(~ pdata$strain)
+fit_limma = lmFit(edata,mod)
+ebayes_limma = eBayes(fit_limma)
+head(ebayes_limma$t)
 
 ## ------------------------------------------------------------------------
-dummy_m = pdata$gender=="M"
-dummy_m
-
-dummy_f = pdata$gender=="F"
-dummy_f
+plot(ebayes_limma$t[,2],-tstats_obj$statistic,col=4,
+     xlab="Moderated T-stat",ylab="T-stat")
+abline(c(0,1),col="darkgrey",lwd=3)
 
 ## ------------------------------------------------------------------------
-lm2 = lm(edata[1,] ~ pdata$gender)
-tidy(lm2)
+mod_adj = model.matrix(~ pdata$strain + as.factor(pdata$lane.number))
+fit_limma_adj = lmFit(edata,mod_adj)
+ebayes_limma_adj = eBayes(fit_limma_adj)
+head(ebayes_limma_adj$t)
 
 ## ------------------------------------------------------------------------
-mod2 = model.matrix(~pdata$gender)
-mod2
+plot(ebayes_limma_adj$t[,2],-tstats_obj$statistic,col=3,
+     xlab="Moderated T-stat",ylab="T-stat")
+abline(c(0,1),lwd=3,col="darkgrey")
 
 ## ------------------------------------------------------------------------
-table(pdata$tissue.type)
-pdata$tissue.type == "adipose"
-pdata$tissue.type == "adrenal"
+mod_lane = model.matrix(~ as.factor(pdata$lane.number))
+fit_limma_lane = lmFit(edata,mod_lane)
+ebayes_limma_lane = eBayes(fit_limma_lane) 
+head(ebayes_limma_lane$t)
 
 ## ------------------------------------------------------------------------
-tidy(lm(edata[1,] ~ pdata$tissue.type ))
+top_lane = topTable(ebayes_limma_lane, coef=2:7,
+                    number=dim(edata)[1],sort.by="none")
+head(top_lane)
 
 ## ------------------------------------------------------------------------
-lm3 = lm(edata[1,] ~ pdata$age + pdata$gender)
-tidy(lm3)
+plot(top_lane$F,fstats_obj$statistic,
+     xlab="Moderated F-statistic",ylab="F-statistic",col=3)
 
 ## ------------------------------------------------------------------------
-lm4 = lm(edata[1,] ~ pdata$age*pdata$gender)
-tidy(lm4)
+edge_study = build_study(edata, grp = as.factor(pdata$lane.number))
+de_obj = lrt(edge_study)
+qval = qvalueObj(de_obj)
+plot(qval$stat,fstats_obj$statistic,col=4,
+      xlab="F-stat from edge",ylab="F-stat from genefilter")
 
 ## ------------------------------------------------------------------------
-lm4 = lm(edata[6,] ~ pdata$age)
-plot(pdata$age,edata[6,],col=2)
-abline(lm4,col=1,lwd=3)
-
-## ------------------------------------------------------------------------
-index = 1:19
-lm5 = lm(edata[6,] ~ index)
-plot(index,edata[6,],col=2)
-abline(lm5,col=1,lwd=3)
-
-lm6 = lm(edata[6,-19] ~ index[-19])
-abline(lm6,col=3,lwd=3)
-
-legend(5,1000,c("With outlier","Without outlier"),col=c(1,3),lwd=3)
-
-
-## ------------------------------------------------------------------------
-par(mfrow=c(1,2))
-hist(lm6$residuals,col=2)
-hist(lm5$residuals,col=3)
-
-## ------------------------------------------------------------------------
-gene1 = log2(edata[1,]+1)
-lm7 = lm(gene1 ~ index)
-hist(lm7$residuals,col=4)
-
-## ------------------------------------------------------------------------
-lm8 = lm(gene1 ~ pdata$tissue.type + pdata$age)
-tidy(lm8)
-
-## ------------------------------------------------------------------------
-colramp = colorRampPalette(1:4)(17)
-lm9 = lm(edata[2,] ~ pdata$age)
-plot(lm9$residuals,col=colramp[as.numeric(pdata$tissue.type)])
+edge_study2 = build_study(edata, grp = as.factor(pdata$lane.number),
+                        adj.var=pdata$strain)
+de_obj2 = lrt(edge_study2)
+qval2 = qvalueObj(de_obj2)
+plot(qval2$stat,fstats_obj$statistic,col=4,
+      xlab="F-stat from edge",ylab="F-stat from genefilter")
 
 ## ----session_info--------------------------------------------------------
 devtools::session_info()

@@ -1,44 +1,45 @@
 ---
+title: Galton example
+author: Jeff Leek
 output:
-  BiocStyle::html_document
+  rmarkdown::html_document:
+    toc: true
+  vignette: >  
+    %\VignetteIndexEntry{Galton example}
+    %\VignetteEngine{knitr::rmarkdown}
+    \usepackage[utf8]{inputenc}
 ---
 
-
-<!-- These options are set up specifically for Bioconductor flavored Markdown --> 
-
-
-<!-- rmarkdown v1 -->
-
-<!--
-%\VignetteIndexEntry{R Markdown Lecture}
-%\VignettePackage{BiocStyle}
-%\VignetteEngine{knitr::knitr}
--->
-
-```{r style, results = 'asis',include=FALSE}
-BiocStyle::markdown()
+```{r front, child="./../front.Rmd", echo=FALSE}
 ```
 
-```{r global_options,include=FALSE}
-## see ch. 10 Hooks of Xie's knitr book
-knit_hooks$set(setPch = function(before, options, envir) {
-  if(before) par(pch = 19)
+
+## Dependencies
+
+This document depends on the following packages:
+
+```{r load_hidden, echo=FALSE, results="hide", warning=FALSE}
+suppressPackageStartupMessages({
+  library(devtools)
+  library(Biobase)
 })
-opts_chunk$set(setPch = TRUE)
-library(RSkittleBrewer)
-# Make the colors pretty
-trop = RSkittleBrewer("tropical")
-palette(trop)
+```
+
+```{r load}
+  library(devtools)
+  library(Biobase)
 ```
 
 
-# Poverty example
+To install these packages you can use the code (or if you are compiling the document, remove the `eval=FALSE` from the chunk.)
 
-Package: [genstats](https://github.com/jtleek/genstats)<br />
-Author: [Jeff Leek](www.jtleek.com) <br />
-Compilation date: `r Sys.Date()`
+```{r install_packages, eval=FALSE}
+install.packages(c("devtools"))
+source("http://www.bioconductor.org/biocLite.R")
+biocLite(c("Biobase"))
+```
 
-### WHO childhood hunger data
+## WHO childhood hunger data
 
 
 ```{r whoDataLoad}
@@ -47,7 +48,7 @@ hunger <- hunger[hunger$Sex!="Both sexes",]
 head(hunger)
 ```
 
-### Plot percent hungry versus time
+## Plot percent hungry versus time
 
 ```{r, dependson="whoDataLoad",fig.height=4,fig.width=4}
 lm1 <- lm(hunger$Numeric ~ hunger$Year)
@@ -55,7 +56,7 @@ plot(hunger$Year,hunger$Numeric,pch=19,col="blue")
 ```
 
 
-### Add the linear model
+## Add the linear model
 
 ```{r, dependson="whoDataLoad",fig.height=4,fig.width=4}
 lm1 <- lm(hunger$Numeric ~ hunger$Year)
@@ -64,14 +65,14 @@ lines(hunger$Year,lm1$fitted,lwd=3,col="darkgrey")
 ```
 
 
-### Color by male/female
+## Color by male/female
 
 ```{r, dependson="whoDataLoad",fig.height=4,fig.width=4}
 plot(hunger$Year,hunger$Numeric,pch=19)
 points(hunger$Year,hunger$Numeric,pch=19,col=((hunger$Sex=="Male")*1+1))
 ```
 
-### Color by male/female
+## Color by male/female
 
 ```{r, dependson="whoDataLoad",fig.height=4,fig.width=4}
 lmM <- lm(hunger$Numeric[hunger$Sex=="Male"] ~ hunger$Year[hunger$Sex=="Male"])
@@ -82,7 +83,7 @@ lines(hunger$Year[hunger$Sex=="Male"],lmM$fitted,col="black",lwd=3)
 lines(hunger$Year[hunger$Sex=="Female"],lmF$fitted,col="red",lwd=3)
 ```
 
-### Two lines, same slope in R
+## Two lines, same slope in R
 
 
 ```{r, dependson="whoDataLoad",fig.height=4,fig.width=4}
@@ -94,7 +95,7 @@ abline(c(lmBoth$coeff[1] + lmBoth$coeff[3],lmBoth$coeff[2] ),col="black",lwd=3)
 ```
 
 
-### Two lines, different slopes in R
+## Two lines, different slopes in R
 
 
 ```{r lmBothChunk, dependson="whoDataLoad",fig.height=4,fig.width=4}
@@ -106,7 +107,7 @@ abline(c(lmBoth$coeff[1] + lmBoth$coeff[3],lmBoth$coeff[2] +lmBoth$coeff[4]),col
 ```
 
 
-### Two lines, different slopes in R
+## Two lines, different slopes in R
 
 
 ```{r, dependson="lmBothChunk",fig.height=4,fig.width=4}
@@ -114,24 +115,16 @@ summary(lmBoth)
 ```
 
 
-### Dependencies
 
-These are the packages that this tutorial depends on:
+## Session information
 
-* [BiocStyle](http://www.bioconductor.org/packages/release/bioc/html/BiocStyle.html)
-* [knitr](https://cran.r-project.org/package=knitr)
-* [RSkittleBrewer](https://github.com/alyssafrazee/RSkittleBrewer)
-* [Biobase](http://bioconductor.org/packages/release/bioc/html/Biobase.html)
-* [devtools](https://cran.r-project.org/package=devtools)
-* [dplyr](https://cran.r-project.org/package=dplyr)
-* [org.Hs.eg.db](http://bioconductor.org/packages/release/data/annotation/html/org.Hs.eg.db.html)
-* [AnnotationDbi](http://bioconductor.org/packages/release/bioc/html/AnnotationDbi.html)
-
-
-### Session information
+Here is the session information 
 
 ```{r session_info}
 devtools::session_info()
 ```
+
+It is also useful to compile the time the document was processed. This document was processed on: `r Sys.Date()`.
+
 
 

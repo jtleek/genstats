@@ -1,60 +1,66 @@
 ---
+title: Many regressions
+author: Jeff Leek
 output:
-  BiocStyle::html_document
+  rmarkdown::html_document:
+    toc: true
+  vignette: >  
+    %\VignetteIndexEntry{Many regressions}
+    %\VignetteEngine{knitr::rmarkdown}
+    \usepackage[utf8]{inputenc}
 ---
 
-
-<!-- These options are set up specifically for Bioconductor flavored Markdown --> 
-
-
-<!-- rmarkdown v1 -->
-
-<!--
-%\VignetteIndexEntry{R Markdown Lecture}
-%\VignettePackage{BiocStyle}
-%\VignetteEngine{knitr::knitr}
--->
-
-```{r style, results = 'asis',include=FALSE}
-BiocStyle::markdown()
+```{r front, child="./../front.Rmd", echo=FALSE}
 ```
 
-```{r global_options,include=FALSE}
-## see ch. 10 Hooks of Xie's knitr book
-knit_hooks$set(setPch = function(before, options, envir) {
-  if(before) par(pch = 19)
+
+## Dependencies
+
+This document depends on the following packages:
+
+```{r load_hidden, echo=FALSE, results="hide", warning=FALSE}
+suppressPackageStartupMessages({
+  library(devtools)
+  library(Biobase)
+  library(limma)
+  library(edge)
 })
-opts_chunk$set(setPch = TRUE)
-library(RSkittleBrewer)
-# Make the colors pretty
-trop = RSkittleBrewer("tropical")
-palette(trop)
+```
+
+```{r load}
+  library(devtools)
+  library(Biobase)
+  library(limma)
+  library(edge)
 ```
 
 
-# Many regressions
+To install these packages you can use the code (or if you are compiling the document, remove the `eval=FALSE` from the chunk.)
 
-Package: [genstats](https://github.com/jtleek/genstats)<br />
-Author: [Jeff Leek](www.jtleek.com) <br />
-Compilation date: `r Sys.Date()`
+```{r install_packages, eval=FALSE}
+install.packages(c("devtools"))
+source("http://www.bioconductor.org/biocLite.R")
+biocLite(c("Biobase","limma","jdstorey/edge"))
+```
 
-### Download the data
+
+## Download the data
 
 
 Here we are going to use some data from the paper [Detection of redundant fusion transcripts as biomarkers or disease-specific therapeutic targets in breast cancer.](http://www.ncbi.nlm.nih.gov/pubmed/22496456) that uses data from different normal human tissues (called the Illumina BodyMap data).
 
 ```{r}
-con =url("http://bowtie-bio.sourceforge.net/recount/ExpressionSets/bodymap_eset.RData")
+con =url("http://bowtie-bio.sourceforge.net/recount/ExpressionSets/bottomly_eset.RData")
 load(file=con)
 close(con)
-bm = bodymap.eset
-pdata=pData(bm)
-edata=as.data.frame(exprs(bm))
-fdata = fData(bm)
+bot = bottomly.eset
+pdata=pData(bot)
+edata=as.matrix(exprs(bot))
+fdata = fData(bot)
 ls()
 ```
 
-### Transform the data
+## Transform the data
 
 Here we will transform the data and remove lowly expressed genes. 
 
@@ -63,11 +69,10 @@ edata = log2(as.matrix(edata) + 1)
 edata = edata[rowMeans(edata) > 10, ]
 ```
 
-### Fit many regression models at once. 
+## Fit many regression models at once. 
 
 ```{r}
-library(edge)
-mod = model.matrix(~ pdata$num.tech.reps)
+mod = model.matrix(~ pdata$strain)
 fit = lm.fit(mod,t(edata))
 names(fit)
 ```
@@ -76,7 +81,7 @@ names(fit)
 
 ```{r}
 fit$coefficients[,1]
-tidy(lm(edata[1, ] ~ pdata$num.tech.reps))
+tidy(lm(as.numeric(edata[1, ]) ~ pdata$strain))
 ```
 
 
@@ -85,7 +90,7 @@ tidy(lm(edata[1, ] ~ pdata$num.tech.reps))
 ```{r}
 par(mfrow=c(1,2))
 hist(fit$coefficients[1,],breaks=100,col=2,xlab="Intercept")
-hist(fit$coefficients[2,],breaks=100,col=2,xlab="Tech Reps")
+hist(fit$coefficients[2,],breaks=100,col=2,xlab="Strain")
 abline(v=0,lwd=3,col=1)
 ```
 
@@ -98,24 +103,51 @@ plot(fit$residuals[,2],col=2)
 ```
 
 
-### Dependencies
+### Fit many regressions with an adjustment
 
-These are the packages that this tutorial depends on:
-
-* [BiocStyle](http://www.bioconductor.org/packages/release/bioc/html/BiocStyle.html)
-* [knitr](https://cran.r-project.org/package=knitr)
-* [RSkittleBrewer](https://github.com/alyssafrazee/RSkittleBrewer)
-* [Biobase](http://bioconductor.org/packages/release/bioc/html/Biobase.html)
-* [devtools](https://cran.r-project.org/package=devtools)
-* [dplyr](https://cran.r-project.org/package=dplyr)
-* [org.Hs.eg.db](http://bioconductor.org/packages/release/data/annotation/html/org.Hs.eg.db.html)
-* [AnnotationDbi](http://bioconductor.org/packages/release/bioc/html/AnnotationDbi.html)
+```{r}
+mod_adj = model.matrix(~ pdata$strain + as.factor(pdata$lane.number))
+fit_adj = lm.fit(mod_adj,t(edata))
+fit_adj$coefficients[,1]
+```
 
 
-### Session information
+## Fit many regressions with the limma package
+
+```{r}
+fit_limma = lmFit(edata,mod_adj)
+names(fit_limma)
+fit_limma$coefficients[1,]
+fit_adj$coefficients[,1]
+```
+
+## Fit many regressions with the edge package
+
+```{r}
+edge_study = build_study(data=edata,grp=pdata$strain,adj.var=as.factor(pdata$lane.number))
+fit_edge = fit_models(edge_study)
+summary(fit_edge)
+fit_edge@beta.coef[1,]
+fit_limma$coefficients[1,]
+```
+
+
+## More information
+
+You can find a lot more information on this model fitting strategy in:
+
+* The [limma paper](http://www.bioconductor.org/packages/release/bioc/vignettes/limma/inst/doc/usersguide.pdf)
+* The [limma vignette](http://www.bioconductor.org/packages/release/bioc/vignettes/limma/inst/doc/usersguide.pdf)
+
+## Session information
+
+Here is the session information 
 
 ```{r session_info}
 devtools::session_info()
 ```
+
+It is also useful to compile the time the document was processed. This document was processed on: `r Sys.Date()`.
+
 
 

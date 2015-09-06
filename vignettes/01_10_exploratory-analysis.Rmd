@@ -1,42 +1,52 @@
 ---
+title: Exploratory analysis
+author: Jeff Leek
 output:
-  BiocStyle::html_document
+  rmarkdown::html_document:
+    toc: true
+  vignette: >  
+    %\VignetteIndexEntry{The three tables in genomics}
+    %\VignetteEngine{knitr::rmarkdown}
+    \usepackage[utf8]{inputenc}
 ---
 
-
-<!-- These options are set up specifically for Bioconductor flavored Markdown --> 
-
-
-<!-- rmarkdown v1 -->
-
-<!--
-%\VignetteIndexEntry{R Markdown Lecture}
-%\VignettePackage{BiocStyle}
-%\VignetteEngine{knitr::knitr}
--->
-
-```{r style, results = 'asis',include=FALSE}
-BiocStyle::markdown()
+```{r front, child="./../front.Rmd", echo=FALSE}
 ```
 
-```{r global_options,include=FALSE}
-## see ch. 10 Hooks of Xie's knitr book
-knit_hooks$set(setPch = function(before, options, envir) {
-  if(before) par(pch = 19)
+
+## Dependencies
+
+This document depends on the following packages:
+
+```{r load_hidden, echo=FALSE, results="hide", warning=FALSE}
+suppressPackageStartupMessages({
+  library(devtools)
+  library(Biobase)
+  library(RSkittleBrewer)
+  library(gplots)
+  library(dplyr)
+  library(AnnotationDbi)
 })
-opts_chunk$set(setPch = TRUE)
-library(RSkittleBrewer)
-# Make the colors pretty
-trop = RSkittleBrewer("tropical")
-palette(trop)
+```
+
+```{r load}
+  library(gplots)
+  library(devtools)
+  library(Biobase)
+  library(RSkittleBrewer)
+  library(org.Hs.eg.db)
+  library(AnnotationDbi)
 ```
 
 
-# Exploratory analysis
+To install these packages you can use the code (or if you are compiling the document, remove the `eval=FALSE` from the chunk.)
 
-Package: [genstats](https://github.com/jtleek/genstats)<br />
-Author: [Jeff Leek](www.jtleek.com) <br />
-Compilation date: `r Sys.Date()`
+```{r install_packages, eval=FALSE}
+install.packages(c("devtools","gplots"))
+source("http://www.bioconductor.org/biocLite.R")
+biocLite(c("Biobase","org.Hs.eg.db","AnnotationDbi"))
+biocLite("alyssafrazee/RSkittleBrewer")
+```
 
 
 ### General principles
@@ -51,11 +61,7 @@ Compilation date: `r Sys.Date()`
 
 ### Make the plots pretty
 
-Typically we will use color to explore data sets and label different values. There are a large number of color options in R. I like the [RSkittleBrewer](http://alyssafrazee.com/RSkittleBrewer.html) package, but you can also check out Jenny Bryan's excellent [lecture on colors in R](http://www.stat.ubc.ca/~jenny/STAT545A/block14_colors.html) for more information. Here I'm installing `RSkittleBrewer`. 
-
-```{r, eval=FALSE}
-devtools::install_github("alyssafrazee/RSkittleBrewer")
-```
+Typically we will use color to explore data sets and label different values. There are a large number of color options in R. I like the [RSkittleBrewer](http://alyssafrazee.com/RSkittleBrewer.html) package, but you can also check out Jenny Bryan's excellent [lecture on colors in R](http://www.stat.ubc.ca/~jenny/STAT545A/block14_colors.html) for more information. 
 
 Load the library and set the color palette with the `palette` function. Now when I type `col = 1` it will look for the first color in the `trop` colors. We also set the character to be a filled dot with `par(pch=19)`.
 
@@ -71,7 +77,7 @@ par(pch=19)
 
 We will use this expression set to look at how we use plots and tables to check for different characteristics
 
-```{r}
+```{r load_data}
 con = url("http://bowtie-bio.sourceforge.net/recount/ExpressionSets/bodymap_eset.RData")
 load(file=con)
 close(con)
@@ -86,7 +92,7 @@ ls()
 
 Tables are good for looking at factor or character variables, especially in phenotype data
 
-```{r}
+```{r tables}
 table(pdata$gender)
 table(pdata$gender,pdata$race)
 ```
@@ -95,13 +101,13 @@ table(pdata$gender,pdata$race)
 
 First check a summary of the distribution to look for scale, this is also one way to check for `NA` values.
 
-```{r}
+```{r summary}
 summary(edata)
 ```
 
 `NA` is the most common character for missing values, but sometimes they are coded as spaces, 999, -1 or "missing". Check for missing values in a variety of ways
 
-```{r}
+```{r missing}
 # Use option useNA to include NA's in table
 table(pdata$age,useNA="ifany")
 
@@ -126,7 +132,7 @@ table(sample_na)
 
 ### Make sure dimensions match up
 The number of rows of the feature data should match the number of rows of the genomic data (both are the number of genes). The number of rows of the phenotype data should match the number of columns of the genomic data (both are the number of samples).
-```{r}
+```{r dimensions}
 dim(fdata)
 dim(pdata)
 dim(edata)
@@ -135,13 +141,13 @@ dim(edata)
 ### Look at overall distributions
 
 Here we see that there are a lot of outliers
-```{r}
+```{r boxplot}
 boxplot(log2(edata+1),col=2,range=0)
 ```
 
 We can also look at this sample by sample with histograms
 
-```{r}
+```{r histograms}
 par(mfrow=c(1,2))
 hist(log2(edata[,1]+1),col=2)
 hist(log2(edata[,2]+1),col=2)
@@ -149,7 +155,7 @@ hist(log2(edata[,2]+1),col=2)
 
 Or with density plots
 
-```{r}
+```{r densities}
 plot(density(log2(edata[,1]+1)),col=2)
 lines(density(log2(edata[,2]+1)),col=3)
 ```
@@ -172,27 +178,17 @@ plot(aa,mm,col=2)
 We can remove rows that are mostly zero and notice any differences in the distributions across samples.
 
 ```{r}
-library(dplyr)
 edata = as.data.frame(edata)
 filt_edata = filter(edata,rowMeans(edata) > 1)
-boxplot(log2(filt_edata+1),col=2)
+boxplot(as.matrix(log2(filt_edata+1)),col=2)
 ```
 
 ### Check for obvious data mixups
 
 Here we are going to do a check to make sure that the men and women are correctly labeled by looking at expression on the Y chromosome. In general you might do several of this type of check to confirm the data are correctly labeled.  
 
-Get the database package:
-
-```{r,eval=FALSE}
-source("http://bioconductor.org/biocLite.R")
-biocLite("org.Hs.eg.db")
-```
-
-
 Get the chromosomes for each gene using the feature data. 
 ```{r}
-library(org.Hs.eg.db)
 aeid = as.character(fdata[,1])
 chr = AnnotationDbi::select(org.Hs.eg.db,keys=aeid,keytype="ENSEMBL",columns="CHR")
 head(chr)
@@ -232,7 +228,7 @@ heatmap(ematrix)
 We might change the coloring since this one is a little hard to see. To do this you have to set up a color palette. 
 
 ```{r}
-colramp = colorRampPalette(c(trop[3],"white",trop[2]))(9)
+colramp = colorRampPalette(c(3,"white",2))(9)
 heatmap(ematrix,col=colramp)
 ```
 
@@ -246,31 +242,19 @@ heatmap(ematrix,col=colramp,Rowv=NA,Colv=NA)
 If you load the `gplots` package you can add a color scale with the `heatmap.2` package. Here we have to add some options to make the dendogram disappear, scale the data by rows, and remove a tracing plot. 
 
 ```{r}
-library(gplots)
 heatmap.2(ematrix,col=colramp,Rowv=NA,Colv=NA,
           dendrogram="none", scale="row",trace="none")
 ```
 
 
 
-### Dependencies
+## Session information
 
-These are the packages that this tutorial depends on:
-
-* [BiocStyle](http://www.bioconductor.org/packages/release/bioc/html/BiocStyle.html)
-* [knitr](https://cran.r-project.org/package=knitr)
-* [RSkittleBrewer](https://github.com/alyssafrazee/RSkittleBrewer)
-* [Biobase](http://bioconductor.org/packages/release/bioc/html/Biobase.html)
-* [devtools](https://cran.r-project.org/package=devtools)
-* [dplyr](https://cran.r-project.org/package=dplyr)
-* [org.Hs.eg.db](http://bioconductor.org/packages/release/data/annotation/html/org.Hs.eg.db.html)
-* [AnnotationDbi](http://bioconductor.org/packages/release/bioc/html/AnnotationDbi.html)
-
-
-### Session information
+Here is the session information 
 
 ```{r session_info}
 devtools::session_info()
 ```
 
+It is also useful to compile the time the document was processed. This document was processed on: `r Sys.Date()`.
 

@@ -1,49 +1,51 @@
 ---
+title: Dimension reduction for genomics
+author: Jeff Leek
 output:
-  BiocStyle::html_document
+  rmarkdown::html_document:
+    toc: true
+  vignette: >  
+    %\VignetteIndexEntry{Dimension reduction for genomics}
+    %\VignetteEngine{knitr::rmarkdown}
+    \usepackage[utf8]{inputenc}
 ---
 
-
-<!-- These options are set up specifically for Bioconductor flavored Markdown --> 
-
-
-<!-- rmarkdown v1 -->
-
-<!--
-%\VignetteIndexEntry{R Markdown Lecture}
-%\VignettePackage{BiocStyle}
-%\VignetteEngine{knitr::knitr}
--->
-
-```{r style, results = 'asis',include=FALSE}
-BiocStyle::markdown()
+```{r front, child="./../front.Rmd", echo=FALSE}
 ```
 
-```{r global_options,include=FALSE}
-## see ch. 10 Hooks of Xie's knitr book
-knit_hooks$set(setPch = function(before, options, envir) {
-  if(before) par(pch = 19)
+
+## Dependencies
+
+This document depends on the following packages:
+
+```{r load_hidden, echo=FALSE, results="hide", warning=FALSE}
+suppressPackageStartupMessages({
+  library(devtools)
+  library(Biobase)
 })
-opts_chunk$set(setPch = TRUE)
-library(RSkittleBrewer)
-# Make the colors pretty
-trop = RSkittleBrewer("tropical")
-palette(trop)
+```
+
+```{r load}
+  library(devtools)
+  library(Biobase)
 ```
 
 
-# Dimension reduction
+To install these packages you can use the code (or if you are compiling the document, remove the `eval=FALSE` from the chunk.)
 
-Package: [genstats](https://github.com/jtleek/genstats)<br />
-Author: [Jeff Leek](www.jtleek.com) <br />
-Compilation date: `r Sys.Date()`
+```{r install_packages, eval=FALSE}
+install.packages(c("devtools"))
+source("http://www.bioconductor.org/biocLite.R")
+biocLite(c("Biobase"))
+```
 
-### General principles
+
+## General principles
 
 * Can we find patterns in matrices of data?
 
 
-### Load some data
+## Load some data
 
 We will use this expression set that combines two studies [Transcriptome genetics using second generation sequencing in a Caucasian population.](http://www.ncbi.nlm.nih.gov/pubmed?term=20220756%5Buid%5D) and [Understanding mechanisms underlying human gene expression variation with RNA sequencing.](http://www.ncbi.nlm.nih.gov/pubmed?term=20220758). These studies are different populations but we counted the same genes for both. Then we'll explore the differences. 
 
@@ -58,17 +60,19 @@ fdata = fData(mp)
 ls()
 ```
 
-### Calculate the singular vectors
+## Calculate the singular vectors
 
 Here we calculate the singular vectors: 
 
 ```{r}
+edata = edata[rowMeans(edata) > 100, ]
+edata = log2(edata + 1)
 edata_centered = edata - rowMeans(edata)
 svd1 = svd(edata_centered)
 names(svd1)
 ```
 
-### Look at the percent variance explained
+## Look at the percent variance explained
 
 The percent of variance explained is given by $\frac{d_{ii}}{\sum_{j}d_{jj}^2}$
 ```{r}
@@ -76,7 +80,7 @@ plot(svd1$d,ylab="Singular value",col=2)
 plot(svd1$d^2/sum(svd1$d^2),ylab="Percent Variance Explained",col=2)
 ```
 
-### Plot top two principal components
+## Plot top two principal components
 
 ```{r}
 par(mfrow=c(1,2))
@@ -84,7 +88,7 @@ plot(svd1$v[,1],col=2,ylab="1st PC")
 plot(svd1$v[,2],col=2,ylab="2nd PC")
 ```
 
-### Plot PC1 vs. PC2
+## Plot PC1 vs. PC2
 
 A very common plot is to plot PC1 versus PC2 to see if you can see any "clusters" or "groups".
 
@@ -107,7 +111,7 @@ points(svd1$v[,1] ~ jitter(as.numeric(pdata$study)),col=as.numeric(pdata$study))
 ```
 
 
-### PCs versus SVs
+## PCs versus SVs
 
 What we have been plotting is not exactly the principal components. 
 
@@ -126,22 +130,37 @@ plot(pc1$rotation[,1],svd2$v[,1],col=2)
 
 Despite this, it is most common for people to perform row-centering and then plot the singular vectors (sometimes labeling them PCs like I have done in this document)
 
-### Further resources
+## Outliers
+
+What happens if we introduce a single outlying gene
+```{r}
+edata_outlier = edata_centered
+edata_outlier[1,] = edata_centered[1,] * 10000
+svd3 = svd(edata_outlier)
+par(mfrow=c(1,2))
+plot(svd1$v[,1],col=1,main="Without outlier")
+plot(svd3$v[,1],col=2,main="With outlier")
+```
+
+It turns out the new top singular vector is perfectly correlated with the outlying gene
+
+```{r}
+plot(svd3$v[,1],edata_outlier[1,],col=4)
+```
+
+
+## Further resources
 
 There are a large number of resources available about PCA and SVD but the lecture notes from [Advanced Statistics for the Life Sciences](http://genomicsclass.github.io/book/) are the best set of lecture notes focused on genomics currently available. 
 
-### Dependencies
 
-These are the packages that this tutorial depends on:
+## Session information
 
-* [BiocStyle](http://www.bioconductor.org/packages/release/bioc/html/BiocStyle.html)
-* [knitr](https://cran.r-project.org/package=knitr)
-* [RSkittleBrewer](https://github.com/alyssafrazee/RSkittleBrewer)
-* [Biobase](http://bioconductor.org/packages/release/bioc/html/Biobase.html)
-* [devtools](https://cran.r-project.org/package=devtools)
-
-### Session information
+Here is the session information 
 
 ```{r session_info}
 devtools::session_info()
 ```
+
+It is also useful to compile the time the document was processed. This document was processed on: `r Sys.Date()`.
+

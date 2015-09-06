@@ -1,42 +1,64 @@
 ---
+title: "R markdown lecture"
+author: "Jeff Leek"
 output:
-  BiocStyle::html_document
+  rmarkdown::html_document:
+    toc: true
+  vignette: >  
+    %\VignetteIndexEntry{R markdown}
+    %\VignetteEngine{knitr::rmarkdown}
+    \usepackage[utf8]{inputenc}
 ---
 
 
-<!-- These options are set up specifically for Bioconductor flavored Markdown --> 
+## Dependencies
 
+This document depends on the following packages:
 
-<!-- rmarkdown v1 -->
-
-<!--
-%\VignetteIndexEntry{R Markdown Lecture}
-%\VignettePackage{BiocStyle}
-%\VignetteEngine{knitr::knitr}
--->
-
-
-# R Markdown Lecture
-
-Package: [genstats](https://github.com/jtleek/genstats)<br />
-Author: [Jeff Leek](www.jtleek.com) <br />
-Compilation date: `r Sys.Date()`
-
-## Setting some global options
-
-These chunks of code set up some global options to make the markdown pretty. 
-
-```{r style, results = 'asis'}
-BiocStyle::markdown()
+```{r}
+library(devtools)
 ```
 
-```{r global_options}
+To install these packages you can use the code (or if you are compiling the document, remove the `eval=FALSE` from the chunk.)
+
+```{r, eval=FALSE}
+install.packages("devtools")
+```
+
+## Make the code pretty
+
+Set the color scheme and pch.
+```{r}
+## Color scheme inspired by the RSkittleBrewer package
+## https://github.com/alyssafrazee/RSkittleBrewer
+tropical=  c('darkorange', 'dodgerblue', 'hotpink', 'limegreen', 'yellow')
+palette(tropical)
+par(pch=19)
+```
+
+Unfortunately for R markdown documents the `pch` won't propagate unless you do something a little more messy. We'll hide this later, but for now this is what you need to do to set the default. 
+
+```{r global_options,warning=FALSE,message=FALSE}
 ## see ch. 10 Hooks of Xie's knitr book
+library(knitr)
 knit_hooks$set(setPch = function(before, options, envir) {
   if(before) par(pch = 19)
 })
 opts_chunk$set(setPch = TRUE)
 ```
+
+We will again hide this in future documents, but this shows how to set a default figure width and height, as well as setting plot margians. 
+
+
+```{r global-plot,warning=FALSE, message=FALSE}
+knitr::opts_chunk$set(fig.width=5, fig.height=5, size="footnotesize",
+                      warning=FALSE, message=FALSE)
+knitr::knit_hooks$set(small.mar = function(before, options, envir) {
+  if (before) graphics::par(mar = c(5,5,1.5,1))
+})
+```
+
+
 
 ## Compiling documents
 
@@ -87,6 +109,7 @@ plot(x,col=3,pch=19)
 ## Other chunk arguments
 
 Add a chunk option of `echo=FALSE` to hide the code. 
+
 ```{r chunk4, echo=FALSE}
 x = rnorm(100)
 plot(x,col=3,pch=19)
@@ -94,11 +117,12 @@ plot(x,col=3,pch=19)
 
 Setting `cache=TRUE` makes it so that the code won't take as long to compile the second time. To see this, uncomment the code below and then run the document twice. 
 
-```{r longtime, cache=TRUE}
+```{r longtime, cache=FALSE}
 #Sys.sleep(10)
 ```
 
 ## Session information
+
 
 It is very useful to record the session information when performing analyses so you can collaborate with yourself in the future. 
 
@@ -108,5 +132,6 @@ devtools::session_info()
 ```
 
 
+It is also useful to compile the time the document was processed. This document was processed on: `r Sys.Date()`.
 
 

@@ -1,0 +1,196 @@
+---
+title: Generalized linear models in R
+author: Jeff Leek
+output:
+  rmarkdown::html_document:
+    toc: true
+  vignette: >  
+    %\VignetteIndexEntry{Generalized linear models}
+    %\VignetteEngine{knitr::rmarkdown}
+    \usepackage[utf8]{inputenc}
+---
+
+```{r front, child="./../front.Rmd", echo=FALSE}
+```
+
+
+## Dependencies
+
+This document depends on the following packages:
+
+```{r load_hidden, echo=FALSE, results="hide", warning=FALSE}
+suppressPackageStartupMessages({
+  library(devtools)
+  library(Biobase)
+  library(snpStats)
+  library(broom)
+  library(MASS)
+  library(DESeq2)
+})
+```
+
+```{r load}
+  library(devtools)
+  library(Biobase)
+  library(snpStats)
+  library(broom)
+  library(MASS)
+  library(DESeq2)
+```
+
+
+To install these packages you can use the code (or if you are compiling the document, remove the `eval=FALSE` from the chunk.)
+
+```{r install_packages, eval=FALSE}
+install.packages(c("devtools","broom","MASS"))
+source("http://www.bioconductor.org/biocLite.R")
+biocLite(c("Biobase","snpStats","DESeq2"))
+```
+
+## Logistic regression
+
+### Load the data
+
+Here we use example SNP data from a case-control genome-wide association study 
+Load an example data set and take a smaller subset of samples for computational efficiency
+
+```{r}
+data(for.exercise)
+use <- seq(1, ncol(snps.10), 10)
+sub.10 <- snps.10[,use]
+```
+
+Calculate the PCs
+
+```{r}
+xxmat <- xxt(sub.10, correct.for.missing=FALSE)
+evv <- eigen(xxmat, symmetric=TRUE)
+pcs <- evv$vectors[,1:5]
+```
+
+### A single logistic regression
+
+First we do an unadjusted logistic regression assuming an additive model.The coefficient is the change in log-odds for a one unit decrease (because homozygous major allele is coded 1) in the number of copies of the minor allele.  
+
+```{r}
+snpdata = sub.10@.Data
+status = subject.support$cc
+snp1 = as.numeric(snpdata[,1])
+snp1[snp1==0] = NA
+glm1 = glm(status ~ snp1,family="binomial")
+tidy(glm1)
+```
+
+
+We can also easily code in other models. For example suppose we want to code a dominant model (so only an association of risk with the two copies of the common allele, now the coefficient on `snp1_dom` is the increase in log odds associated with two copies of the major allele).
+
+```{r}
+snp1_dom = (snp1 == 1)
+glm1_dom = glm(status ~ snp1_dom,family="binomial")
+tidy(glm1_dom)
+tidy(glm1)
+```
+
+
+We can also easily adjust for other variables. 
+
+```{r}
+glm2 = glm(status ~ snp1 + pcs[,1:5],family="binomial")
+tidy(glm2)
+```
+
+
+### Fit many glms at once
+
+For logistic regression modeling of many SNPs at once we can use the `snps.rhs.tests` function which computes an asymptotic chi-squared statistic. This isn't quite the same thing as the F-statistics we have been calculating but can be used in the same way for significance calculations. 
+
+```{r}
+glm_all = snp.rhs.tests(status ~ 1,snp.data=sub.10)
+slotNames(glm_all)
+qq.chisq(chi.squared(glm_all),df=1)
+```
+
+We can also adjust for variables like principal components
+
+
+```{r}
+glm_all_adj = snp.rhs.tests(status ~ pcs,snp.data=sub.10)
+qq.chisq(chi.squared(glm_all_adj),df=1)
+```
+
+## Poisson/negative binomial regression
+
+### Download the data
+
+
+Here we are going to use some data from the paper [Evaluating gene expression in C57BL/6J and DBA/2J mouse striatum using RNA-Seq and microarrays.](http://www.ncbi.nlm.nih.gov/pubmed?term=21455293) that is a comparative RNA-seq analysis of different mouse strains.
+
+```{r}
+con =url("http://bowtie-bio.sourceforge.net/recount/ExpressionSets/bottomly_eset.RData")
+load(file=con)
+close(con)
+bot = bottomly.eset
+pdata=pData(bot)
+edata=as.matrix(exprs(bot))
+fdata = fData(bot)
+ls()
+```
+
+### Transform the data
+
+Here we remove lowly expressed genes but we will leave them as counts 
+
+```{r}
+edata = edata[rowMeans(edata) > 10, ]
+```
+
+### A single Poisson regression
+
+The coefficient in this case is the increase in the log number of counts comparing one strain to the other. If you exponentiate the coefficients then $\exp(intercept)$ is expected count for C57BL/6J and $\exp(intercept)\exp(strainDBA/2J)$ is the expected count for the strain DBA/2J. 
+
+
+```{r}
+glm3 = glm(edata[1, ] ~ pdata$strain,family="poisson")
+tidy(glm3)
+```
+
+You can also fit a negative binomial regression one at a time in R with: 
+
+```{r}
+glm.nb1 = glm.nb(edata[1, ] ~ pdata$strain)
+tidy(glm.nb1)
+```
+
+
+### Multiple negative binomial regressions
+
+We can use the `DESeq2` package to perform many (moderated) negative binomial regressions at once. We first need to create a DESeq data set. 
+
+```{r}
+de = DESeqDataSetFromMatrix(edata, pdata, ~strain)
+glm_all_nb = DESeq(de)
+result_nb = results(glm_all_nb)
+hist(result_nb$stat)
+```
+
+
+## More information
+
+You can find a lot more information on this model fitting strategy in:
+
+* These lecture notes on [glms in R](http://data.princeton.edu/R/glms.html)
+* The [snpStats vignettes](http://bioconductor.org/packages/release/bioc/html/snpStats.html)
+* The [RNA-seq workflow](http://www.bioconductor.org/help/workflows/rnaseqGene/) for Bioconductor
+
+## Session information
+
+Here is the session information 
+
+```{r session_info}
+devtools::session_info()
+```
+
+It is also useful to compile the time the document was processed. This document was processed on: `r Sys.Date()`.
+
+
+
