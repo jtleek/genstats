@@ -81,14 +81,12 @@ plot(pc1$rotation[,1],svd2$v[,1],col=2)
 
 ## ------------------------------------------------------------------------
 edata_outlier = edata_centered
-edata_outlier[1,] = edata_centered[1,] * 10000
+edata_outlier[6,] = edata_centered[6,] * 10000
 svd3 = svd(edata_outlier)
-par(mfrow=c(1,2))
-plot(svd1$v[,1],col=1,main="Without outlier")
-plot(svd3$v[,1],col=2,main="With outlier")
+plot(svd1$v[,1],svd3$v[,1],xlab="Without outlier",ylab="With outlier")
 
 ## ------------------------------------------------------------------------
-plot(svd3$v[,1],edata_outlier[1,],col=4)
+plot(svd3$v[,1],edata_outlier[6,],col=4)
 
 ## ----session_info--------------------------------------------------------
 devtools::session_info()

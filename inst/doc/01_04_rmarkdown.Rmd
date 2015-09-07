@@ -11,6 +11,7 @@ output:
 ---
 
 
+
 ## Dependencies
 
 This document depends on the following packages:
@@ -117,8 +118,8 @@ plot(x,col=3,pch=19)
 
 Setting `cache=TRUE` makes it so that the code won't take as long to compile the second time. To see this, uncomment the code below and then run the document twice. 
 
-```{r longtime, cache=FALSE}
-#Sys.sleep(10)
+```{r longtime, cache=TRUE}
+Sys.sleep(10)
 ```
 
 ## Session information

@@ -5,7 +5,7 @@ This is the R package containing the code and lecture materials for the class St
 ```{r}
 source("http://bioconductor.org/biocLite.R")
 biocLite("devtools")    # only if devtools not yet installed
-biocLite("jtleek/genstats")
+biocLite("jtleek/genstats",ref="gh-pages")
 ```
 
 You can see the list of lecture notes and open them using the vignette command:
