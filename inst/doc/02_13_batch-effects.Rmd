@@ -143,7 +143,7 @@ abline(c(0,1),col=1,lwd=3)
 ```
 
 
-## Principal components for populatin structure
+## Principal components for population structure
 
 Load an example data set and take a smaller subset of samples for computational efficiency
 
