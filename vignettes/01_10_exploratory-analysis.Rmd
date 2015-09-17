@@ -53,11 +53,11 @@ biocLite("alyssafrazee/RSkittleBrewer")
 
 * Use plots as often as possible
 * Use tables for phenotype data
-* Look for 
-  * Missing values
-  * Outlier values
-  * Mislabeled samples
-  * Naming consistency
+* Look for: 
+    * Missing values
+    * Outlier values
+    * Mislabeled samples
+    * Naming consistency
 
 ### Make the plots pretty
 
