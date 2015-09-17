@@ -22,12 +22,14 @@ This document depends on the following packages:
 suppressPackageStartupMessages({
   library(devtools)
   library(Biobase)
+  library(dplyr)
 })
 ```
 
 ```{r load}
   library(devtools)
   library(Biobase)
+  library(dplyr)
 ```
 
 
