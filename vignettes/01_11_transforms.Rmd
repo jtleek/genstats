@@ -66,7 +66,7 @@ ls()
 
 ## Skewed distributions
 
-We would like continuous data to be nice and summetric like a normal distribution for two reasons:(1) plots are easier to see this way and (2) most statistical methods are designed to work better for non-skewed data. 
+We would like continuous data to be nice and symmetric like a normal distribution for two reasons:(1) plots are easier to see this way and (2) most statistical methods are designed to work better for non-skewed data. 
 
 ```{r}
 hist(rnorm(1000),col=2)
