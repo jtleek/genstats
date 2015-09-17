@@ -142,7 +142,7 @@ dim(edata)
 
 Here we see that there are a lot of outliers
 ```{r boxplot}
-boxplot(log2(edata+1),col=2,range=0)
+boxplot(log2(edata+1),col=2,range=0, las=2, cex.axis=0.8)
 ```
 
 We can also look at this sample by sample with histograms
@@ -180,7 +180,7 @@ We can remove rows that are mostly zero and notice any differences in the distri
 ```{r}
 edata = as.data.frame(edata)
 filt_edata = filter(edata,rowMeans(edata) > 1)
-boxplot(as.matrix(log2(filt_edata+1)),col=2)
+boxplot(as.matrix(log2(filt_edata+1)),col=2, las=2, cex.axis=0.8)
 ```
 
 ### Check for obvious data mixups
