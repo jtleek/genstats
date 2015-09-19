@@ -74,7 +74,7 @@ names(svd1)
 
 ## Look at the percent variance explained
 
-The percent of variance explained is given by $\frac{d_{ii}}{\sum_{j}d_{jj}^2}$
+The percent of variance explained is given by $\frac{d_{ii}^2}{\sum_{j}d_{jj}^2}$
 ```{r}
 plot(svd1$d,ylab="Singular value",col=2)
 plot(svd1$d^2/sum(svd1$d^2),ylab="Percent Variance Explained",col=2)

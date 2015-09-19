@@ -47,7 +47,7 @@ knit_hooks$set(setPch = function(before, options, envir) {
 opts_chunk$set(setPch = TRUE)
 ```
 
-We will again hide this in future documents, but this shows how to set a default figure width and height, as well as setting plot margians. 
+We will again hide this in future documents, but this shows how to set a default figure width and height, as well as setting plot margins. 
 
 
 ```{r global-plot,warning=FALSE, message=FALSE}
